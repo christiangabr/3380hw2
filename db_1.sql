@@ -24,8 +24,9 @@ CREATE TABLE restaurant (
     food_type VARCHAR
 );
 
+CREATE SEQUENCE transaction_id_seq;
 CREATE TABLE transactions (
-    t_id INT,
+    t_id SERIAL PRIMARY KEY,
     customer_id INT,
     food_id INT,
     transaction_date VARCHAR
@@ -75,14 +76,17 @@ INSERT INTO restaurant (restaurant_id, restaurant_name, food_type) VALUES
 (300, 'Mexican Restaurant', 'Mexican'),
 (400, 'Japanese Restaurant', 'Japanese');
 
-INSERT INTO transactions (t_id, customer_id, food_id, transaction_date) VALUES 
-(1, 1, 103, '2023-10-20'),
-(2, 1, 104, '2023-10-21'),
-(3, 2, 301, '2023-10-19'),
-(4, 2, 306, '2023-10-20'),
-(5, 3, 203, '2023-10-15'),
-(6, 3, 207, '2023-10-16'),
-(7, 4, 402, '2023-10-14'),
-(8, 4, 404, '2023-10-15'),
-(9, 5, 107, '2023-10-13'),
-(10, 5, 401, '2023-10-14');
+-- INSERT INTO transactions (t_id, customer_id, food_id, transaction_date) VALUES 
+-- (1, 1, 103, '2023-10-20'),
+-- (2, 1, 104, '2023-10-21'),
+-- (3, 2, 301, '2023-10-19'),
+-- (4, 2, 306, '2023-10-20'),
+-- (5, 3, 203, '2023-10-15'),
+-- (6, 3, 207, '2023-10-16'),
+-- (7, 4, 402, '2023-10-14'),
+-- (8, 4, 404, '2023-10-15'),
+-- (9, 5, 107, '2023-10-13'),
+-- (10, 5, 401, '2023-10-14');
+
+
+

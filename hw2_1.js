@@ -75,29 +75,51 @@ app.get('/', async (req, res) => {
 
 
 app.get('/food_list', async (req, res) => {
-
     const foodId = req.query.foodId;
-    if (foodId){
+    const customerId = req.query.customerId;
+
+    if (foodId && customerId) {
         try {
             await pool.query('BEGIN');
-            //await pool.query('UPDATE product SET quantity = quantity - 1 WHERE product_id = $1 AND quantity > 0', [foodId]);
-            await pool.query('COMMIT');
+            const foodData = await pool.query('SELECT * FROM food_list WHERE food_id = $1', [foodId]);
+
+            if (foodData.rows.length > 0) {
+                const food = foodData.rows[0];
+                const transactionDate = new Date().toJSON().slice(0, 10); // Get the current date (YYYY-MM-DD)
+                const queryResult = await pool.query('INSERT INTO transactions (customer_id, food_id, transaction_date) VALUES ($1, $2, $3) RETURNING t_id', [customerId, food.food_id, transactionDate]);
+
+                if (queryResult.rows.length > 0) {
+                    const t_id = queryResult.rows[0].t_id;
+                    await pool.query('COMMIT');
+                } else {
+                    await pool.query('ROLLBACK');
+                    return res.status(500).send("Failed to retrieve transaction ID.");
+                }
+            } else {
+                await pool.query('ROLLBACK');
+                return res.status(404).send("Food not found.");
+            }
         } catch (error) {
             await pool.query('ROLLBACK');
             return res.status(500).send("Transaction error: " + error.message);
         }
     }
+
+    let food_listHtml = '';
+    let food_listHtml2 = '';
+    let food_listHtml3 = '';
+    let food_listHtml4 = '';
+
     try {
         const result = await pool.query(`SELECT * FROM food_list WHERE food_id >= 100 AND food_id < 200 ORDER BY food_id`);
         if (result.rows.length > 0) {
-            customerName = result.rows[0].customer_name; 
             food_listHtml = result.rows.map(row => {
                 return `<p>FoodID: ${row.food_id}, Food: ${row.food_name}, Price: ${row.price} </p>`;
             }).join('');
         }
+
         const result2 = await pool.query(`SELECT * FROM food_list WHERE food_id >= 200 AND food_id < 300 ORDER BY food_id`);
         if (result2.rows.length > 0) {
-            customerName = result2.rows[0].customer_name; 
             food_listHtml2 = result2.rows.map(row => {
                 return `<p>FoodID: ${row.food_id}, Food: ${row.food_name}, Price: ${row.price} </p>`;
             }).join('');
@@ -105,7 +127,6 @@ app.get('/food_list', async (req, res) => {
 
         const result3 = await pool.query(`SELECT * FROM food_list WHERE food_id >= 300 AND food_id < 400 ORDER BY food_id`);
         if (result3.rows.length > 0) {
-            customerName = result3.rows[0].customer_name; 
             food_listHtml3 = result3.rows.map(row => {
                 return `<p>FoodID: ${row.food_id}, Food: ${row.food_name}, Price: ${row.price} </p>`;
             }).join('');
@@ -113,13 +134,10 @@ app.get('/food_list', async (req, res) => {
 
         const result4 = await pool.query(`SELECT * FROM food_list WHERE food_id >= 400 AND food_id < 500 ORDER BY food_id`);
         if (result4.rows.length > 0) {
-            customerName = result4.rows[0].customer_name; 
             food_listHtml4 = result4.rows.map(row => {
                 return `<p>FoodID: ${row.food_id}, Food: ${row.food_name}, Price: ${row.price} </p>`;
             }).join('');
         }
-        
-
     } catch (error) {
         return res.status(500).send("Error: " + error.message);
     }
@@ -142,6 +160,8 @@ app.get('/food_list', async (req, res) => {
             ${food_listHtml4}
             <div>
                 <form action="/food_list" method="GET">
+                    <label for="customerId">Enter Customer ID:</label>
+                    <input type="number" name="customerId" id="customerId" required>
                     <label for="foodId">Enter Food ID:</label>
                     <input type="number" name="foodId" id="foodId" required>
                     <button type="submit">Buy Food</button>
