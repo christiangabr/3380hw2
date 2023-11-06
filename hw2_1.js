@@ -120,7 +120,7 @@ app.get('/food_list', async (req, res) => {
             ${food_listHtml4}
             <div>
                 <form action="/food_list" method="GET">
-                    <label for="customerId">Enter Customer ID (1-5):</label>
+                    <label for="customerId">Enter Customer ID (1-10):</label>
                     <input type="number" name="customerId" id="customerId" required>
                     <label for="foodId">Enter Food ID:</label>
                     <input type="number" name="foodId" id="foodId" required>
@@ -209,7 +209,7 @@ app.get('/transactions', async (req, res) => {
             <title>Transactions</title>
         </head>
         <body>
-            ${firstName ? `<h2> Customer: ${firstName + " " + lastName} </h2>` : '<h2>Enter a Customer ID (1-5) to view transactions.</h2>'}
+            ${firstName ? `<h2> Customer: ${firstName + " " + lastName} </h2>` : '<h2>Enter a Customer ID (1-10) to view transactions.</h2>'}
             <div>
                 <h3>Transactions:</h3>
                 ${transactionsHtml}
