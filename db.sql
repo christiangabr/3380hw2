@@ -1,67 +1,96 @@
-DROP TABLE IF EXISTS product;
 DROP TABLE IF EXISTS customer;
+DROP TABLE IF EXISTS food_list;
 DROP TABLE IF EXISTS transactions;
-DROP TABLE IF EXISTS employee;
-CREATE TABLE product (
-    product_id INT,
-    name VARCHAR,
-    price INT,
-    quantity INT
-);
-
-CREATE TABLE employee (
-    employee_id INT,
-    first_name VARCHAR,
-    last_name VARCHAR,
-    age INT
-);
-
-INSERT INTO employee (employee_id, first_name, last_name, age) VALUES
-(101, 'John', 'Doe', 28),
-(102, 'Jane', 'Smith', 34),
-(103, 'Alice', 'Johnson', 25),
-(104, 'Bob', 'Williams', 30),
-(105, 'Charlie', 'Brown', 29);
-
-
-
-
-INSERT INTO product (product_id, name, price, quantity) VALUES 
-(1, 'Apple', 99,10),
-(2, 'Banana', 49,15),
-(3, 'Cherry', 79,20),
-(4, 'Date', 89,30),
-(5, 'Elderberry', 109,10),
-(6, 'Fig', 119,15),
-(7, 'Grape', 129,5);
+DROP TABLE IF EXISTS restaurant;
 
 CREATE TABLE customer (
     customer_id INT,
-    name VARCHAR
+    first_name VARCHAR,
+    last_name VARCHAR,
+    age INT,
+    account_balance INT
 );
 
-INSERT INTO customer (customer_id, name) VALUES 
-(1, 'John'),
-(2, 'Jane'),
-(3, 'Alice'),
-(4, 'Bob'),
-(5, 'Charlie');
+CREATE TABLE food_list (
+    food_id INT,
+    food_name VARCHAR,
+    price INT,
+    restaurant_id INT
+);
 
+CREATE TABLE restaurant (
+    restaurant_id INT,
+    restaurant_name VARCHAR,
+    food_type VARCHAR
+);
+
+CREATE SEQUENCE transaction_id_seq;
 CREATE TABLE transactions (
-    t_id INT,
+    t_id SERIAL PRIMARY KEY,
     customer_id INT,
-    product_id INT,
+    food_id INT,
     transaction_date VARCHAR
 );
 
-INSERT INTO transactions (t_id, customer_id, product_id, transaction_date) VALUES 
-(1, 1, 1, '2023-10-20'),
-(2, 1, 2, '2023-10-21'),
-(3, 2, 1, '2023-10-19'),
-(4, 2, 3, '2023-10-20'),
-(5, 3, 4, '2023-10-15'),
-(6, 3, 5, '2023-10-16'),
-(7, 4, 6, '2023-10-14'),
-(8, 4, 7, '2023-10-15'),
-(9, 5, 2, '2023-10-13'),
-(10, 5, 3, '2023-10-14');
+INSERT INTO customer (customer_id, first_name, last_name, age, account_balance) VALUES
+(1, 'John', 'Doe', 28, 1000),
+(2, 'Jane', 'Smith', 26, 1000),
+(3, 'Alice', 'Johnson', 25, 1000),
+(4, 'Bob', 'Williams', 24, 1000),
+(5, 'Charlie', 'Brown', 36, 1000),
+(6, 'William', 'Smith', 55, 1000),
+(7, 'Jake', 'Chan', 59, 1000),
+(8, 'Leon', 'Kennedy', 28, 1000),
+(9, 'Ada', 'Wong', 29, 1000),
+(10, 'Jill', 'Valentine', 27, 1000);
+
+
+INSERT INTO food_list (food_id, food_name, price, restaurant_id) VALUES
+(101, 'Eggroll', 6, 100),
+(102, 'Spring Roll', 6, 100),
+(103, 'Steamed Bun', 9, 100),
+(104, 'Wonton Soup', 7, 100),
+(105, 'Chow Mein', 12, 100),
+(106, 'Fried Rice', 10, 100),
+(107, 'Kung Pao Chicken', 14, 100),
+(107, 'Orange Chicken', 13, 100),
+(108, 'Sweet and Sour Pork', 15, 100),
+(109, 'Peking Duck', 20, 100),
+(110, 'Mooncake', 8, 100),
+(201, 'Lasagna', 17, 200),
+(202, 'Pizza', 25, 200),
+(203, 'Carbonara', 20, 200),
+(204, 'Fettuccine Alfredo', 18, 200),
+(205, 'Tortellini', 15, 200),
+(206, 'Risoto', 15, 200),
+(207, 'Gnocchi', 18, 200),
+(208, 'Focaccia', 16, 200),
+(209, 'Gelato', 12, 200),
+(210, 'Tiramisu', 16, 200),
+(301, 'Enchiladas', 12, 300),
+(302, 'Tacos', 12, 300),
+(303, 'Tamales', 10, 300),
+(304, 'Burrito', 10, 300),
+(305, 'Fajita', 11, 300),
+(306, 'Birria', 15, 300),
+(307, 'Nachos', 9, 300),
+(308, 'Pozole de Pollo', 16, 300),
+(309, 'Menudo', 14, 300),
+(310, 'Churros', 8, 300),
+(401, 'Sushi', 12, 400),
+(402, 'Ramen', 15, 400),
+(403, 'Tempura', 10, 400),
+(404, 'Takoyaki', 8, 400),
+(405, 'Miso Soup', 8, 400),
+(406, 'Udon', 14, 400),
+(407, 'Unagi', 16, 400),
+(408, 'Wagyu', 20, 400),
+(409, 'Sashimi', 14, 400),
+(410, 'Mochi', 7, 400);
+
+INSERT INTO restaurant (restaurant_id, restaurant_name, food_type) VALUES
+(100, 'Chinese Restaurant', 'Chinese'),
+(200, 'Italian Restaurant', 'Italian'),
+(300, 'Mexican Restaurant', 'Mexican'),
+(400, 'Japanese Restaurant', 'Japanese');
+
