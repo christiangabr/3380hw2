@@ -1,13 +1,20 @@
 DROP TABLE IF EXISTS customer;
+DROP TABLE IF EXISTS bank_account;
 DROP TABLE IF EXISTS food_list;
 DROP TABLE IF EXISTS transactions;
 DROP TABLE IF EXISTS restaurant;
+DROP SEQUENCE IF EXISTS transaction_id_seq;
 
 CREATE TABLE customer (
     customer_id INT,
     first_name VARCHAR,
     last_name VARCHAR,
-    age INT,
+    age INT
+);
+
+CREATE TABLE bank_account (
+    customer_id INT,
+    card_number VARCHAR,
     account_balance INT
 );
 
@@ -32,17 +39,29 @@ CREATE TABLE transactions (
     transaction_date VARCHAR
 );
 
-INSERT INTO customer (customer_id, first_name, last_name, age, account_balance) VALUES
-(1, 'John', 'Doe', 28, 1000),
-(2, 'Jane', 'Smith', 26, 1000),
-(3, 'Alice', 'Johnson', 25, 1000),
-(4, 'Bob', 'Williams', 24, 1000),
-(5, 'Charlie', 'Brown', 36, 1000),
-(6, 'William', 'Smith', 55, 1000),
-(7, 'Jake', 'Chan', 59, 1000),
-(8, 'Leon', 'Kennedy', 28, 1000),
-(9, 'Ada', 'Wong', 29, 1000),
-(10, 'Jill', 'Valentine', 27, 1000);
+INSERT INTO customer (customer_id, first_name, last_name, age) VALUES
+(1, 'John', 'Doe', 28),
+(2, 'Jane', 'Smith', 26),
+(3, 'Alice', 'Johnson', 25),
+(4, 'Bob', 'Williams', 24),
+(5, 'Charlie', 'Brown', 36),
+(6, 'William', 'Smith', 55),
+(7, 'Jake', 'Chan', 59),
+(8, 'Leon', 'Kennedy', 28),
+(9, 'Ada', 'Wong', 29),
+(10, 'Jill', 'Valentine', 27);
+
+INSERT INTO bank_account (customer_id, card_number, account_balance) VALUES
+(1, '1111111111111111', 1000),
+(2, '2222222222222222', 1000),
+(3, '3333333333333333', 1000),
+(4, '4444444444444444', 1000),
+(5, '5555555555555555', 1000),
+(6, '6666666666666666', 1000),
+(7, '7777777777777777', 1000),
+(8, '8888888888888888', 1000),
+(9, '9999999999999999', 1000),
+(10, '1010101010101010', 1000);
 
 
 INSERT INTO food_list (food_id, food_name, price, restaurant_id) VALUES
@@ -89,8 +108,8 @@ INSERT INTO food_list (food_id, food_name, price, restaurant_id) VALUES
 (410, 'Mochi', 7, 400);
 
 INSERT INTO restaurant (restaurant_id, restaurant_name, food_type) VALUES
-(100, 'Chinese Restaurant', 'Chinese'),
-(200, 'Italian Restaurant', 'Italian'),
-(300, 'Mexican Restaurant', 'Mexican'),
-(400, 'Japanese Restaurant', 'Japanese');
+(100, 'The Flying Dumpling', 'Chinese'),
+(200, 'Sorrento', 'Italian'),
+(300, 'Picuaritos', 'Mexican'),
+(400, 'Fukuoka', 'Japanese');
 
