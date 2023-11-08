@@ -13,26 +13,7 @@ const creds = require('./creds.json');
 const pool = new Pool(creds);
 
 app.get('/', async (req, res) => {
-    res.send(`
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Transactions</title>
-        </head>
-        <body>
-            <a href="/food_list"> <button>Food List Page</button> </a>
-            <br>
-            <br>
-            <a href="/customer"> <button> Customers </button> </a>
-        </body>
-        </html>
-    `);
-});
 
-
-app.get('/food_list', async (req, res) => {
     const foodId = req.query.foodId;
     const customerId = req.query.customerId;
 
@@ -49,7 +30,7 @@ app.get('/food_list', async (req, res) => {
                 // Add transaction
                 if (queryResult.rows.length > 0) {
                     const t_id = queryResult.rows[0].t_id;
-                    await pool.query('UPDATE customer SET account_balance = account_balance - $1 WHERE customer_id = $2', [food.price, customerId]);
+                    await pool.query('UPDATE bank_account SET account_balance = account_balance - $1 WHERE customer_id = $2', [food.price, customerId]);
                     await pool.query('COMMIT');
                 } else {
                     await pool.query('ROLLBACK');
@@ -65,6 +46,44 @@ app.get('/food_list', async (req, res) => {
             return res.status(500).send("Transaction error: " + error.message);
         }
     }
+
+    res.send(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Transactions</title>
+        </head>
+        <body>
+        <div>
+        <form action="/" method="GET">
+            <h3> Make a Transaction: </h3>
+            <label for="customerId">Enter Customer ID:</label>
+            <input type="number" name="customerId" id="customerId" required>
+            <label for="foodId">Enter Food ID:</label>
+            <input type="number" name="foodId" id="foodId" required>
+            <button type="submit">Buy Food</button>
+            <p> Note: Check the Customers Page for Customer IDs and the Food List page for Food IDs.</p>
+        </form>
+        <div>
+            <a href="/food_list"> <button> Food List </button> </a>
+            <br>
+            <br>
+            <a href="/customer"> <button> Customers </button> </a>
+            <br>
+            <br>
+            <a href="/bankaccount"> <button> Bank Account </button> </a>
+            <br>
+            <br>
+            <a href="/transactionspage"> <button> Transactions </button> </a>
+        </body>
+        </html>
+    `);
+});
+
+
+app.get('/food_list', async (req, res) => {
 
     let food_listHtml = '';
     let food_listHtml2 = '';
@@ -111,7 +130,7 @@ app.get('/food_list', async (req, res) => {
         </head>
         <body>
             <h2> Food List Page     
-            <a href="/customer"> <button> Customers </button> </a>
+            <a href="/"> <button> Home </button> </a>
             </h2> 
             <h3> Chinese Restaurant </h3>
             ${food_listHtml}
@@ -121,15 +140,6 @@ app.get('/food_list', async (req, res) => {
             ${food_listHtml3}
             <h3> Japanese Restaurant </h3>
             ${food_listHtml4}
-            <div>
-                <form action="/food_list" method="GET">
-                    <label for="customerId">Enter Customer ID (1-10):</label>
-                    <input type="number" name="customerId" id="customerId" required>
-                    <label for="foodId">Enter Food ID:</label>
-                    <input type="number" name="foodId" id="foodId" required>
-                    <button type="submit">Buy Food</button>
-                </form>
-            <div>
         </body>
         </html>
     `);
@@ -142,7 +152,7 @@ app.get('/customer', async (req, res) => {
         if (result.rows.length > 0) {
             customerName = result.rows[0].customer_name; 
             customersHtml = result.rows.map(row => {
-                return `<p>customerID: ${row.customer_id}, First Name: ${row.first_name}, Last Name: ${row.last_name}, Age: ${row.age}, Account Balance: ${'$' + row.account_balance}</p>`;
+                return `<p>Customer ID: ${row.customer_id}, First Name: ${row.first_name}, Last Name: ${row.last_name}, Age: ${row.age}</p>`;
             }).join('');
         }
 
@@ -160,13 +170,83 @@ app.get('/customer', async (req, res) => {
             <title>Transactions</title>
         </head>
         <body>
-        <h2> Customers </h2>
+        <h2> Customers 
+        <a href="/"> <button> Home </button> </a> 
+        </h2>
         ${customersHtml}
             <form action="/transactions" method="GET">
                 <label for="customerId">Enter Customer ID:</label>
                 <input type="number" name="customerId" id="customerId" required>
                 <button type="submit">Get Transactions</button>
             </form>
+        </body>
+        </html>
+    `);
+});
+
+app.get('/bankaccount', async (req, res) => {
+
+    try {
+        const result = await pool.query(`SELECT * FROM bank_account ORDER BY customer_id`);
+        if (result.rows.length > 0) {
+            customerName = result.rows[0].customer_name; 
+            bankAccountHtml = result.rows.map(row => {
+                return `<p>Customer ID: ${row.customer_id}, Card Number: ${row.card_number}, Account Balance: ${row.account_balance}</p>`;
+            }).join('');
+        }
+
+    } catch (error) {
+        return res.status(500).send("Error: " + error.message);
+    }
+
+    res.send(`
+    <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <title> Bank Account Information </title>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Transactions</title>
+        </head>
+        <body>
+        <h2> Bank Account Information
+        <a href="/"> <button> Home </button> </a> 
+        </h2>
+        ${bankAccountHtml}
+        </body>
+        </html>
+    `);
+});
+
+app.get('/transactionspage', async (req, res) => {
+
+    try {
+        const result = await pool.query(`SELECT * FROM transactions ORDER BY t_id`);
+        if (result.rows.length > 0) {
+            customerName = result.rows[0].customer_name; 
+            transactionsHtml = result.rows.map(row => {
+                return `<p>Transaction ID: ${row.t_id}, Customer ID: ${row.customer_id}, Food ID: ${row.food_id}, Transaction Date: ${row.transaction_date}</p>`;
+            }).join('');
+        }
+
+    } catch (error) {
+        return res.status(500).send("Error: " + error.message);
+    }
+
+    res.send(`
+    <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <title> Bank Account Information </title>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Transactions</title>
+        </head>
+        <body>
+        <h2> Bank Account Information
+        <a href="/"> <button> Home </button> </a> 
+        </h2>
+        ${transactionsHtml}
         </body>
         </html>
     `);
@@ -212,17 +292,13 @@ app.get('/transactions', async (req, res) => {
             <title>Transactions</title>
         </head>
         <body>
-            ${firstName ? `<h2> Customer: ${firstName + " " + lastName} </h2>` : '<h2>Enter a Customer ID (1-10) to view transactions.</h2>'}
+        <a href="/"> <button> Home </button> </a> 
+            ${firstName ? `<h2> Customer: ${firstName + " " + lastName} </h2>` : '<h2>Enter a Customer ID (1-10) to view transactions. </h2>'}
             <div>
                 <h3>Transactions:</h3>
                 ${transactionsHtml}
                 ${transactionsHtml ? `<p>Total Spent: ${'$' + totalSpent}</p>` : ''}
             </div>
-            <a href="/food_list">
-            <button>Food List Page</button> </a>
-            <br>
-            <br>
-            <a href="/customer"> <button> Customers </button> </a>
         </body>
         </html>
     `);
