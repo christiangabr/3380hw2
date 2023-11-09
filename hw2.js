@@ -61,7 +61,7 @@ app.get('/', async (req, res) => {
         <div>
         <form action ="init_tables" method=GET">
             <h3> Initialize Tables: </h3>
-            <button type="submit" onclick="return confirm('Are you sure you want to initialize tables?')">Initialize Tables</button>
+            <button type="submit" onclick="return confirm('Are you sure you want to initialize tables? Doing so may clear currently existing tables.')">Initialize Tables</button>
             <p> Note: This will initialize the tables in the database.</p>
         </form>
         <form action="/" method="GET">
@@ -332,9 +332,8 @@ app.get('/transactions', async (req, res) => {
         </head>
         <body>
         <a href="/"> <button> Home </button> </a> 
-            ${firstName ? `<h2> Customer: ${firstName + " " + lastName} </h2>` : '<h2>Enter a Customer ID (1-10) to view transactions. </h2>'}
+            ${firstName ? `<h2> ${firstName + " " + lastName + '&#39s Transactions:'} </h2>` : '<h2> No Transactions. </h2>'}
             <div>
-                <h3>Transactions:</h3>
                 ${transactionsHtml}
                 ${transactionsHtml ? `<p>Total Spent: ${'$' + totalSpent}</p>` : ''}
             </div>
