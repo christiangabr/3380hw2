@@ -8,6 +8,8 @@ const express = require('express');
 const { Pool } = require('pg');
 const app = express();
 const port = 3000;
+const path = require('path'); // Import the 'path' module
+const fs = require('fs'); // Import the 'fs' module
 
 const creds = require('./creds.json');
 const pool = new Pool(creds);
@@ -57,6 +59,11 @@ app.get('/', async (req, res) => {
         </head>
         <body>
         <div>
+        <form action ="init_tables" method=GET">
+            <h3> Initialize Tables: </h3>
+            <button type="submit" onclick="return confirm('Are you sure you want to initialize tables?')">Initialize Tables</button>
+            <p> Note: This will initialize the tables in the database.</p>
+        </form>
         <form action="/" method="GET">
             <h3> Make a Transaction: </h3>
             <label for="customerId">Enter Customer ID:</label>
@@ -82,6 +89,38 @@ app.get('/', async (req, res) => {
     `);
 });
 
+app.get('/init_tables', async (req, res) => {
+    const client = await pool.connect();
+
+    try {
+        // Begin a transaction
+        await client.query('BEGIN');
+
+        // Read the SQL script from the db.sql file
+        const sqlFilePath = path.join(__dirname, 'db.sql');
+        const sqlScript = fs.readFileSync(sqlFilePath, 'utf8');
+
+        // Execute the SQL script to initialize tables
+        await client.query(sqlScript);
+
+        // Commit the transaction if everything is successful
+        await client.query('COMMIT');
+
+        // Release the client connection
+        client.release();
+
+        // Optionally, you can provide a success message or redirect to another page.
+        return res.status(200).send("Tables initialized successfully.");
+    } catch (error) {
+        // Roll back the transaction in case of an error
+        await client.query('ROLLBACK');
+
+        // Release the client connection
+        client.release();
+
+        return res.status(500).send("Table initialization failed: " + error.message);
+    }
+});
 
 app.get('/food_list', async (req, res) => {
 
@@ -219,7 +258,7 @@ app.get('/bankaccount', async (req, res) => {
 });
 
 app.get('/transactionspage', async (req, res) => {
-
+    let transactionsHtml = 'No transaction yet.';
     try {
         const result = await pool.query(`SELECT * FROM transactions ORDER BY t_id`);
         if (result.rows.length > 0) {
@@ -237,13 +276,13 @@ app.get('/transactionspage', async (req, res) => {
     <!DOCTYPE html>
         <html lang="en">
         <head>
-            <title> Bank Account Information </title>
+            <title> Transactions </title>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Transactions</title>
         </head>
         <body>
-        <h2> Bank Account Information
+        <h2> Transactions
         <a href="/"> <button> Home </button> </a> 
         </h2>
         ${transactionsHtml}
