@@ -15,7 +15,6 @@ const creds = require('./creds.json');
 const pool = new Pool(creds);
 
 app.get('/', async (req, res) => {
-
     const foodId = req.query.foodId;
     const customerId = req.query.customerId;
 
@@ -42,6 +41,8 @@ app.get('/', async (req, res) => {
                         await pool.query('ROLLBACK');
                         return res.status(500).send("Failed to retrieve transaction ID.");
                     }
+                    // Redirect to prevent form resubmission on refresh
+                    return res.redirect('/transactionspage');
                 } else {
                     return res.status(500).send("Account balance is too low.");
                 }
@@ -76,7 +77,7 @@ app.get('/', async (req, res) => {
             <input type="number" name="customerId" id="customerId" required>
             <label for="foodId">Enter Food ID:</label>
             <input type="number" name="foodId" id="foodId" required>
-            <button type="submit">Buy Food</button>
+            <button type="submit" >Buy Food</button>
             <p> Note: Check the Customers Page for Customer IDs and the Food List page for Food IDs.</p>
         </form>
         <div>
@@ -189,7 +190,6 @@ app.get('/food_list', async (req, res) => {
 
 app.get('/customer', async (req, res) => {
 
-    // Displaying Customer Contents
     try {
         const result = await pool.query(`SELECT c.customer_id as customer_id, c.first_name as first_name,
         c.last_name as last_name, c.age as age, b.card_number as card_number, b.account_balance as account_balance
@@ -207,15 +207,20 @@ app.get('/customer', async (req, res) => {
         return res.status(500).send("Error: " + error.message);
     }
 
-    // Adding Funds
     const amount = req.query.amount;
     const customerId = req.query.customerId;
+
     if (amount && customerId) {
         try {
             await pool.query('BEGIN');
             const customerData = await pool.query('SELECT * FROM customer WHERE customer_id = $1', [customerId]);
+
             if (customerData.rows.length > 0) {
+                const customer = customerData.rows[0];
                 await pool.query('UPDATE bank_account SET account_balance = account_balance + $1 WHERE customer_id = $2', [amount, customerId]);
+                await pool.query('COMMIT');
+                // Redirect to prevent form resubmission on refresh
+                return res.redirect('/customer');
             } else {
                 await pool.query('ROLLBACK');
                 return res.status(404).send("Customer ID not Found.");
@@ -242,12 +247,12 @@ app.get('/customer', async (req, res) => {
         ${customersHtml}
         <br>
         <form action="/customer" method="GET">
-        <h3> Add Funds to Account Balance: </h3>
-        <label for="customerId">Enter Customer ID:</label>
-        <input type="number" name="customerId" id="customerId" required>
-        <label for="amount">Enter Amount ($):</label>
-        <input type="number" name="amount" id="amount" required>
-        <button type="submit">Add Funds</button>
+            <h3> Add Funds to Account Balance: </h3>
+            <label for="customerId">Enter Customer ID:</label>
+            <input type="number" name="customerId" id="customerId" required>
+            <label for="amount">Enter Amount ($):</label>
+            <input type="number" name="amount" id="amount" required>
+            <button type="submit">Add Funds</button>
         </form>
         </body>
         </html>
@@ -295,13 +300,12 @@ app.get('/transactionspage', async (req, res) => {
 });
 
 app.get('/transactions', async (req, res) => {
-
-    // Getting a specific customer's transactions
     const customerId = req.query.customerId;
     let transactionsHtml = "";
     let totalSpent = 0;
     let firstName = "";
     let lastName = "";
+
     if (customerId) {
         try {
             const result = await pool.query(`
