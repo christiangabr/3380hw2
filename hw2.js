@@ -23,22 +23,28 @@ app.get('/', async (req, res) => {
         try {
             await pool.query('BEGIN');
             const foodData = await pool.query('SELECT * FROM food_list WHERE food_id = $1', [foodId]);
+            const customer_account = await pool.query('SELECT * FROM bank_account WHERE customer_id = $1', [customerId]);
 
             if (foodData.rows.length > 0) {
                 const food = foodData.rows[0];
+                const bank = customer_account.rows[0];
                 const transactionDate = new Date().toJSON().slice(0, 10); // Get the current date (YYYY-MM-DD)
-                const queryResult = await pool.query('INSERT INTO transactions (customer_id, food_id, transaction_date) VALUES ($1, $2, $3) RETURNING t_id', [customerId, food.food_id, transactionDate]);
 
-                // Add transaction
-                if (queryResult.rows.length > 0) {
-                    const t_id = queryResult.rows[0].t_id;
-                    await pool.query('UPDATE bank_account SET account_balance = account_balance - $1 WHERE customer_id = $2', [food.price, customerId]);
-                    await pool.query('COMMIT');
+                if (bank.account_balance > food.price) {
+                    // Add transaction
+                    const queryResult = await pool.query('INSERT INTO transactions (customer_id, food_id, transaction_date) VALUES ($1, $2, $3) RETURNING t_id', [customerId, food.food_id, transactionDate]);
+                    
+                    if (queryResult.rows.length > 0) {
+                        const t_id = queryResult.rows[0].t_id;
+                        await pool.query('UPDATE bank_account SET account_balance = account_balance - $1 WHERE customer_id = $2', [food.price, customerId]);
+                        await pool.query('COMMIT');
+                    } else {
+                        await pool.query('ROLLBACK');
+                        return res.status(500).send("Failed to retrieve transaction ID.");
+                    }
                 } else {
-                    await pool.query('ROLLBACK');
-                    return res.status(500).send("Failed to retrieve transaction ID.");
+                    return res.status(500).send("Account balance is too low.");
                 }
-                
             } else {
                 await pool.query('ROLLBACK');
                 return res.status(404).send("Food not found.");
@@ -78,9 +84,6 @@ app.get('/', async (req, res) => {
             <br>
             <br>
             <a href="/customer"> <button> Customers </button> </a>
-            <br>
-            <br>
-            <a href="/bankaccount"> <button> Bank Account </button> </a>
             <br>
             <br>
             <a href="/transactionspage"> <button> Transactions </button> </a>
@@ -171,13 +174,13 @@ app.get('/food_list', async (req, res) => {
             <h2> Food List Page     
             <a href="/"> <button> Home </button> </a>
             </h2> 
-            <h3> Chinese Restaurant </h3>
+            <h3> The Flying Dumpling (Chinese Restaurant) </h3>
             ${food_listHtml}
-            <h3> Italian Restaurant </h3>
+            <h3> Sorrento (Italian Restaurant) </h3>
             ${food_listHtml2}
-            <h3> Mexican Restaurant </h3>
+            <h3> Picuaritos (Mexican Restaurant) </h3>
             ${food_listHtml3}
-            <h3> Japanese Restaurant </h3>
+            <h3> Fukuoka (Japanese Restaurant) </h3>
             ${food_listHtml4}
         </body>
         </html>
@@ -186,17 +189,41 @@ app.get('/food_list', async (req, res) => {
 
 app.get('/customer', async (req, res) => {
 
+    // Displaying Customer Contents
     try {
-        const result = await pool.query(`SELECT * FROM customer ORDER BY customer_id`);
+        const result = await pool.query(`SELECT c.customer_id as customer_id, c.first_name as first_name,
+        c.last_name as last_name, c.age as age, b.card_number as card_number, b.account_balance as account_balance
+        FROM customer c JOIN bank_account b ON c.customer_id = b.customer_id`);
         if (result.rows.length > 0) {
             customerName = result.rows[0].customer_name; 
             customersHtml = result.rows.map(row => {
-                return `<p>Customer ID: ${row.customer_id}, First Name: ${row.first_name}, Last Name: ${row.last_name}, Age: ${row.age}</p>`;
+                return `<p>Customer ID: ${row.customer_id}, First Name: ${row.first_name}, Last Name: ${row.last_name}, Age: ${row.age},
+                Card Number: ${row.card_number}, Account Balance: ${'$' + row.account_balance}
+                </p>`;
             }).join('');
         }
 
     } catch (error) {
         return res.status(500).send("Error: " + error.message);
+    }
+
+    // Adding Funds
+    const amount = req.query.amount;
+    const customerId = req.query.customerId;
+    if (amount && customerId) {
+        try {
+            await pool.query('BEGIN');
+            const customerData = await pool.query('SELECT * FROM customer WHERE customer_id = $1', [customerId]);
+            if (customerData.rows.length > 0) {
+                await pool.query('UPDATE bank_account SET account_balance = account_balance + $1 WHERE customer_id = $2', [amount, customerId]);
+            } else {
+                await pool.query('ROLLBACK');
+                return res.status(404).send("Customer ID not Found.");
+            }
+        } catch (error) {
+            await pool.query('ROLLBACK');
+            return res.status(500).send("Transaction error: " + error.message);
+        }
     }
 
     res.send(`
@@ -213,49 +240,20 @@ app.get('/customer', async (req, res) => {
         <a href="/"> <button> Home </button> </a> 
         </h2>
         ${customersHtml}
-            <form action="/transactions" method="GET">
-                <label for="customerId">Enter Customer ID:</label>
-                <input type="number" name="customerId" id="customerId" required>
-                <button type="submit">Get Transactions</button>
-            </form>
+        <br>
+        <form action="/customer" method="GET">
+        <h3> Add Funds to Account Balance: </h3>
+        <label for="customerId">Enter Customer ID:</label>
+        <input type="number" name="customerId" id="customerId" required>
+        <label for="amount">Enter Amount ($):</label>
+        <input type="number" name="amount" id="amount" required>
+        <button type="submit">Add Funds</button>
+        </form>
         </body>
         </html>
     `);
 });
 
-app.get('/bankaccount', async (req, res) => {
-
-    try {
-        const result = await pool.query(`SELECT * FROM bank_account ORDER BY customer_id`);
-        if (result.rows.length > 0) {
-            customerName = result.rows[0].customer_name; 
-            bankAccountHtml = result.rows.map(row => {
-                return `<p>Customer ID: ${row.customer_id}, Card Number: ${row.card_number}, Account Balance: ${row.account_balance}</p>`;
-            }).join('');
-        }
-
-    } catch (error) {
-        return res.status(500).send("Error: " + error.message);
-    }
-
-    res.send(`
-    <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <title> Bank Account Information </title>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Transactions</title>
-        </head>
-        <body>
-        <h2> Bank Account Information
-        <a href="/"> <button> Home </button> </a> 
-        </h2>
-        ${bankAccountHtml}
-        </body>
-        </html>
-    `);
-});
 
 app.get('/transactionspage', async (req, res) => {
     let transactionsHtml = 'No transaction yet.';
@@ -286,18 +284,24 @@ app.get('/transactionspage', async (req, res) => {
         <a href="/"> <button> Home </button> </a> 
         </h2>
         ${transactionsHtml}
+        <form action="/transactions" method="GET">
+        <label for="customerId">Enter Customer ID:</label>
+        <input type="number" name="customerId" id="customerId" required>
+        <button type="submit">Get Transactions</button>
+        </form>
         </body>
         </html>
     `);
 });
 
 app.get('/transactions', async (req, res) => {
+
+    // Getting a specific customer's transactions
     const customerId = req.query.customerId;
     let transactionsHtml = "";
     let totalSpent = 0;
     let firstName = "";
     let lastName = "";
-
     if (customerId) {
         try {
             const result = await pool.query(`
