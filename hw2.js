@@ -22,7 +22,7 @@ app.get('/', async (req, res) => {
         try {
             await pool.query('BEGIN');
             const foodData = await pool.query('SELECT * FROM food_list WHERE food_id = $1', [foodId]);
-            const customer_account = await pool.query('SELECT * FROM bank_account WHERE customer_id = $1', [customerId]);
+            const customer_account = await pool.query('SELECT * FROM account_info WHERE customer_id = $1', [customerId]);
 
             if (foodData.rows.length > 0) {
                 const food = foodData.rows[0];
@@ -35,7 +35,7 @@ app.get('/', async (req, res) => {
                     
                     if (queryResult.rows.length > 0) {
                         const t_id = queryResult.rows[0].t_id;
-                        await pool.query('UPDATE bank_account SET account_balance = account_balance - $1 WHERE customer_id = $2', [food.price, customerId]);
+                        await pool.query('UPDATE account_info SET account_balance = account_balance - $1 WHERE customer_id = $2', [food.price, customerId]);
                         await pool.query('COMMIT');
                     } else {
                         await pool.query('ROLLBACK');
@@ -190,10 +190,11 @@ app.get('/food_list', async (req, res) => {
 
 app.get('/customer', async (req, res) => {
 
+    // To Display Customer Data
     try {
         const result = await pool.query(`SELECT c.customer_id as customer_id, c.first_name as first_name,
-        c.last_name as last_name, c.age as age, b.card_number as card_number, b.account_balance as account_balance
-        FROM customer c JOIN bank_account b ON c.customer_id = b.customer_id`);
+        c.last_name as last_name, c.age as age, a.card_number as card_number, a.account_balance as account_balance
+        FROM customer c JOIN account_info a ON c.customer_id = a.customer_id ORDER BY c.customer_id`);
         if (result.rows.length > 0) {
             customerName = result.rows[0].customer_name; 
             customersHtml = result.rows.map(row => {
@@ -207,17 +208,41 @@ app.get('/customer', async (req, res) => {
         return res.status(500).send("Error: " + error.message);
     }
 
+    // To Add New Customer
+    const firstName = req.query.firstName;
+    const lastName = req.query.lastName;
+    const age = req.query.age;
+    const cardNum = req.query.cardNum;
+
+    if (firstName && lastName && age && cardNum) {
+        try {
+            await pool.query('BEGIN');
+            const customerInsertResult = await pool.query('INSERT INTO customer (first_name, last_name, age) VALUES ($1, $2, $3) RETURNING customer_id', [firstName, lastName, age]);
+            const customer = customerInsertResult.rows[0];
+            const customerId = customer.customer_id;
+            // Insert into the 'account_info' table with the retrieved customer_id
+            await pool.query('INSERT INTO account_info (customer_id, card_number, account_balance) VALUES ($1, $2, $3)', [customerId, cardNum, 0]);
+            await pool.query('COMMIT');
+             // Redirect to prevent form resubmission on refresh
+            return res.redirect('/customer');
+        } catch (error) {
+            await pool.query('ROLLBACK');
+            return res.status(500).send("Transaction error: " + error.message);
+        }
+    }
+
+
+
+    // To Update Customer Account Balance
     const amount = req.query.amount;
     const customerId = req.query.customerId;
-
     if (amount && customerId) {
         try {
             await pool.query('BEGIN');
             const customerData = await pool.query('SELECT * FROM customer WHERE customer_id = $1', [customerId]);
 
             if (customerData.rows.length > 0) {
-                const customer = customerData.rows[0];
-                await pool.query('UPDATE bank_account SET account_balance = account_balance + $1 WHERE customer_id = $2', [amount, customerId]);
+                await pool.query('UPDATE account_info SET account_balance = account_balance + $1 WHERE customer_id = $2', [amount, customerId]);
                 await pool.query('COMMIT');
                 // Redirect to prevent form resubmission on refresh
                 return res.redirect('/customer');
@@ -230,6 +255,7 @@ app.get('/customer', async (req, res) => {
             return res.status(500).send("Transaction error: " + error.message);
         }
     }
+
 
     res.send(`
     <!DOCTYPE html>
@@ -245,6 +271,19 @@ app.get('/customer', async (req, res) => {
         <a href="/"> <button> Home </button> </a> 
         </h2>
         ${customersHtml}
+        <br>
+        <form action="/customer" method="GET">
+            <h3> Add New Customer: </h3>
+            <label for="firstName">Enter First Name:</label>
+            <input type="text" name="firstName" id="firstName" required>
+            <label for="lastName">Enter Last Name:</label>
+            <input type="text" name="lastName" id="lastName" required>
+            <label for="age">Enter Age:</label>
+            <input type="number" name="age" id="age" required>
+            <label for="cardNum">Enter Card Number:</label>
+            <input type="text" name="cardNum" id="cardNum" pattern=".{16}" title="Enter exactly 16 characters" required>
+            <button type="submit">Add Customer</button>
+        </form>
         <br>
         <form action="/customer" method="GET">
             <h3> Add Funds to Account Balance: </h3>
