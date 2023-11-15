@@ -1,21 +1,23 @@
 DROP TABLE IF EXISTS customer;
-DROP TABLE IF EXISTS bank_account;
+DROP TABLE IF EXISTS account_info;
 DROP TABLE IF EXISTS food_list;
 DROP TABLE IF EXISTS transactions;
 DROP TABLE IF EXISTS restaurant;
 
 CREATE TABLE customer (
-    customer_id INT,
+    customer_id SERIAL PRIMARY KEY,
     first_name VARCHAR,
     last_name VARCHAR,
     age INT
 );
+ALTER SEQUENCE customer_customer_id_seq RESTART WITH 6;
 
-CREATE TABLE bank_account (
-    customer_id INT,
+CREATE TABLE account_info (
+    customer_id SERIAL PRIMARY KEY,
     card_number VARCHAR,
     account_balance INT
 );
+ALTER SEQUENCE account_info_customer_id_seq RESTART WITH 6;
 
 CREATE TABLE food_list (
     food_id INT,
@@ -42,25 +44,14 @@ INSERT INTO customer (customer_id, first_name, last_name, age) VALUES
 (2, 'Jane', 'Smith', 26),
 (3, 'Alice', 'Johnson', 25),
 (4, 'Bob', 'Williams', 24),
-(5, 'Charlie', 'Brown', 36),
-(6, 'William', 'Smith', 55),
-(7, 'Jake', 'Chan', 59),
-(8, 'Leon', 'Kennedy', 28),
-(9, 'Ada', 'Wong', 29),
-(10, 'Jill', 'Valentine', 27);
+(5, 'Charlie', 'Brown', 36);
 
-INSERT INTO bank_account (customer_id, card_number, account_balance) VALUES
-(1, '1111111111111111', 100),
-(2, '2222222222222222', 0),
-(3, '3333333333333333', 0),
-(4, '4444444444444444', 0),
-(5, '5555555555555555', 0),
-(6, '6666666666666666', 0),
-(7, '7777777777777777', 0),
-(8, '8888888888888888', 0),
-(9, '9999999999999999', 0),
-(10, '1010101010101010', 0);
-
+INSERT INTO account_info (customer_id, card_number, account_balance) VALUES
+(1, '8734432167821239', 100),
+(2, '4356432155823123', 0),
+(3, '4231237923832181', 0),
+(4, '5634728398732734', 0),
+(5, '9873231267528321', 0);
 
 INSERT INTO food_list (food_id, food_name, price, restaurant_id) VALUES
 (101, 'Eggroll', 6, 100),
