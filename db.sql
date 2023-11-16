@@ -15,8 +15,9 @@ ALTER SEQUENCE customer_customer_id_seq RESTART WITH 6;
 CREATE TABLE account_info (
     customer_id SERIAL PRIMARY KEY,
     card_number VARCHAR,
-    account_balance INT
+    account_balance FLOAT
 );
+
 ALTER SEQUENCE account_info_customer_id_seq RESTART WITH 6;
 
 CREATE TABLE food_list (
