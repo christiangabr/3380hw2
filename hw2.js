@@ -13,6 +13,7 @@ const fs = require('fs'); // Import the 'fs' module
 
 const creds = require('./creds.json');
 const pool = new Pool(creds);
+const tax = 0.05;
 
 app.get('/', async (req, res) => {
     const foodId = req.query.foodId;
@@ -35,7 +36,8 @@ app.get('/', async (req, res) => {
                     
                     if (queryResult.rows.length > 0) {
                         const t_id = queryResult.rows[0].t_id;
-                        await pool.query('UPDATE account_info SET account_balance = account_balance - $1 WHERE customer_id = $2', [food.price, customerId]);
+                        let totalCost = food.price + (food.price * tax);
+                        await pool.query('UPDATE account_info SET account_balance = account_balance - $1 WHERE customer_id = $2', [totalCost, customerId]);
                         await pool.query('COMMIT');
                     } else {
                         await pool.query('ROLLBACK');
@@ -290,7 +292,7 @@ app.get('/customer', async (req, res) => {
             <label for="customerId">Enter Customer ID:</label>
             <input type="number" name="customerId" id="customerId" required>
             <label for="amount">Enter Amount ($):</label>
-            <input type="number" name="amount" id="amount" required>
+            <input type="text" name="amount" id="amount" required>
             <button type="submit">Add Funds</button>
         </form>
         </body>
@@ -360,7 +362,7 @@ app.get('/transactions', async (req, res) => {
                 firstName = result.rows[0].first_name;
                 lastName = result.rows[0].last_name;
                 transactionsHtml = result.rows.map(row => {
-                    totalSpent += row.food_price;
+                    totalSpent += row.food_price + row.food_price * tax;
                     return `<p>ID: ${row.t_id}, Restaurant: ${row.restaurant_name}, Food: ${row.food_name}, Price: ${'$' + row.food_price}, Date: ${row.transaction_date}</p>`;
                 }).join('');
             }
@@ -382,7 +384,7 @@ app.get('/transactions', async (req, res) => {
             ${firstName ? `<h2> ${firstName + " " + lastName + '&#39s Transactions:'} </h2>` : '<h2> No Transactions. </h2>'}
             <div>
                 ${transactionsHtml}
-                ${transactionsHtml ? `<p>Total Spent: ${'$' + totalSpent}</p>` : ''}
+                ${transactionsHtml ? `<p>Total Spent (Including Tax): ${'$' + totalSpent}</p>` : ''}
             </div>
         </body>
         </html>
