@@ -21,14 +21,14 @@ CREATE TABLE account_info (
 ALTER SEQUENCE account_info_customer_id_seq RESTART WITH 6;
 
 CREATE TABLE food_list (
-    food_id INT,
+    food_id SERIAL PRIMARY KEY,
     food_name VARCHAR,
     price INT,
     restaurant_id INT
 );
 
 CREATE TABLE restaurant (
-    restaurant_id INT,
+    restaurant_id INT PRIMARY KEY,
     restaurant_name VARCHAR,
     food_type VARCHAR
 );
@@ -62,7 +62,6 @@ INSERT INTO food_list (food_id, food_name, price, restaurant_id) VALUES
 (105, 'Chow Mein', 12, 100),
 (106, 'Fried Rice', 10, 100),
 (107, 'Kung Pao Chicken', 14, 100),
-(107, 'Orange Chicken', 13, 100),
 (108, 'Sweet and Sour Pork', 15, 100),
 (109, 'Peking Duck', 20, 100),
 (110, 'Mooncake', 8, 100),
