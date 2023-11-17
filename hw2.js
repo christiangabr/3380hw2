@@ -14,6 +14,7 @@ const fs = require('fs'); // Import the 'fs' module
 const creds = require('./creds.json');
 const pool = new Pool(creds);
 const tax = 0.05;
+app.use(express.static(__dirname));
 
 app.get('/', async (req, res) => {
     const foodId = req.query.foodId;
@@ -90,6 +91,9 @@ app.get('/', async (req, res) => {
             <br>
             <br>
             <a href="/transactionspage"> <button> Transactions </button> </a>
+
+        <h3> Useful Links: </h3>
+        <a href="readme.txt" target="_blank">View Readme File</a>
         </body>
         </html>
     `);
@@ -131,38 +135,31 @@ app.get('/init_tables', async (req, res) => {
 app.get('/food_list', async (req, res) => {
 
     let food_listHtml = '';
-    let food_listHtml2 = '';
-    let food_listHtml3 = '';
-    let food_listHtml4 = '';
 
     try {
-        const result = await pool.query(`SELECT * FROM food_list WHERE food_id >= 100 AND food_id < 200 ORDER BY food_id`);
+        const result = await pool.query(`SELECT * FROM food_list 
+        JOIN restaurant ON food_list.restaurant_id = restaurant.restaurant_id 
+        ORDER BY food_list.restaurant_id`);
+
         if (result.rows.length > 0) {
-            food_listHtml = result.rows.map(row => {
-                return `<p>FoodID: ${row.food_id}, Food: ${row.food_name}, Price: ${'$' + row.price} </p>`;
-            }).join('');
-        }
+                let previousRestaurantId = null;
 
-        const result2 = await pool.query(`SELECT * FROM food_list WHERE food_id >= 200 AND food_id < 300 ORDER BY food_id`);
-        if (result2.rows.length > 0) {
-            food_listHtml2 = result2.rows.map(row => {
-                return `<p>FoodID: ${row.food_id}, Food: ${row.food_name}, Price: ${'$' + row.price} </p>`;
-            }).join('');
-        }
+                food_listHtml = result.rows.map(row => {
+                    // Check if the current row's restaurant_id is different from the previous row's restaurant_id
+                    const isDifferentRestaurantId = previousRestaurantId !== row.restaurant_id;
 
-        const result3 = await pool.query(`SELECT * FROM food_list WHERE food_id >= 300 AND food_id < 400 ORDER BY food_id`);
-        if (result3.rows.length > 0) {
-            food_listHtml3 = result3.rows.map(row => {
-                return `<p>FoodID: ${row.food_id}, Food: ${row.food_name}, Price: ${'$' + row.price} </p>`;
-            }).join('');
-        }
+                    // Create different HTML based on the condition
+                    const html = isDifferentRestaurantId
+                        ? `<h3> ${row.restaurant_name} (${row.food_type} Restaurant) </h3>
+                        <p>FoodID: ${row.food_id}, Food: ${row.food_name}, Price: ${'$' + row.price}</p>`
+                        : `FoodID: ${row.food_id}, Food: ${row.food_name}, Price: ${'$' + row.price}</p>`;
 
-        const result4 = await pool.query(`SELECT * FROM food_list WHERE food_id >= 400 AND food_id < 500 ORDER BY food_id`);
-        if (result4.rows.length > 0) {
-            food_listHtml4 = result4.rows.map(row => {
-                return `<p>FoodID: ${row.food_id}, Food: ${row.food_name}, Price: ${'$' + row.price} </p>`;
-            }).join('');
-        }
+                    // Update the previousRestaurantId for the next iteration
+                    previousRestaurantId = row.restaurant_id;
+
+                    return html;
+                }).join('');
+            }
     } catch (error) {
         return res.status(500).send("Error: " + error.message);
     }
@@ -177,14 +174,7 @@ app.get('/food_list', async (req, res) => {
             <h2> Food List Page     
             <a href="/"> <button> Home </button> </a>
             </h2> 
-            <h3> The Flying Dumpling (Chinese Restaurant) </h3>
             ${food_listHtml}
-            <h3> Sorrento (Italian Restaurant) </h3>
-            ${food_listHtml2}
-            <h3> Picuaritos (Mexican Restaurant) </h3>
-            ${food_listHtml3}
-            <h3> Fukuoka (Japanese Restaurant) </h3>
-            ${food_listHtml4}
         </body>
         </html>
     `);
