@@ -81,17 +81,16 @@ app.get('/', async (req, res) => {
             <label for="foodId">Enter Food ID:</label>
             <input type="number" name="foodId" id="foodId" required>
             <button type="submit" >Buy Food</button>
-            <p> Note: Check the Customers Page for Customer IDs and the Food List page for Food IDs.</p>
+            <p> Note: Check the Customers page for Customer IDs and the Restaurants and Menus page for Food IDs.</p>
         </form>
         <div>
-            <a href="/food_list"> <button> Food List </button> </a>
-            <br>
-            <br>
             <a href="/customer"> <button> Customers </button> </a>
             <br>
             <br>
+            <a href="/food_list"> <button> Restaurants and Menus </button> </a>
+            <br>
+            <br>
             <a href="/transactionspage"> <button> Transactions </button> </a>
-
         <h3> Useful Links: </h3>
         <a href="readme.txt" target="_blank">View Readme File</a>
         </body>
