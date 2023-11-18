@@ -133,13 +133,15 @@ app.get('/init_tables', async (req, res) => {
 
 app.get('/food_list', async (req, res) => {
 
-    let food_listHtml = '';
 
+    // Display Restaurants + Menus
+    let food_listHtml = '';
+    let food_listHtml2 = '';
     try {
         const result = await pool.query(`SELECT * FROM food_list 
         JOIN restaurant ON food_list.restaurant_id = restaurant.restaurant_id 
         ORDER BY food_list.restaurant_id`);
-
+        const restaurantOptions = await pool.query('SELECT restaurant_id FROM restaurant');
         if (result.rows.length > 0) {
                 let previousRestaurantId = null;
 
@@ -149,7 +151,7 @@ app.get('/food_list', async (req, res) => {
 
                     // Create different HTML based on the condition
                     const html = isDifferentRestaurantId
-                        ? `<h3> ${row.restaurant_name} (${row.food_type} Restaurant) </h3>
+                        ? `<h3> ${row.restaurant_name} (${row.food_type} Restaurant),   Restaurant ID: ${row.restaurant_id}</h3>
                         <p>FoodID: ${row.food_id}, Food: ${row.food_name}, Price: ${'$' + row.price}</p>`
                         : `FoodID: ${row.food_id}, Food: ${row.food_name}, Price: ${'$' + row.price}</p>`;
 
@@ -159,8 +161,43 @@ app.get('/food_list', async (req, res) => {
                     return html;
                 }).join('');
             }
-    } catch (error) {
-        return res.status(500).send("Error: " + error.message);
+        const result2 = await pool.query('SELECT * FROM restaurant WHERE restaurant_id NOT IN (SELECT f.restaurant_id FROM food_list f JOIN restaurant r on f.restaurant_id = r.restaurant_id)');
+        if (result2.rows.length > 0) {
+            food_listHtml2 = result2.rows.map(row => {
+                return `<h3> ${row.restaurant_name} (${row.food_type} Restaurant),   Restaurant ID: ${row.restaurant_id}</h3>`;
+            }).join('');
+        }
+    // Add New Restaurant
+    const restaurantName = req.query.restaurantName;
+    const foodType = req.query.foodType;
+    if (restaurantName && foodType) {
+        try {
+            await pool.query('BEGIN');
+            const customerInsertResult = await pool.query('INSERT INTO restaurant (restaurant_name, food_type) VALUES ($1, $2) RETURNING restaurant_id', [restaurantName, foodType]);
+             // Redirect to prevent form resubmission on refresh
+              await pool.query('COMMIT');
+            return res.redirect('/food_list');
+        } catch (error) {
+            await pool.query('ROLLBACK');
+            return res.status(500).send("Transaction error: " + error.message);
+        }
+    }
+
+    // Add New Food Item
+    const restaurantID = req.query.restaurantID;
+    const foodName = req.query.foodName;
+    const foodPrice = req.query.foodPrice;
+    if (restaurantID && foodName && foodPrice) {
+        try {
+            await pool.query('BEGIN');
+            const customerInsertResult = await pool.query('INSERT INTO food_list (food_name, price, restaurant_id) VALUES ($1, $2, $3) RETURNING food_id', [foodName, foodPrice, restaurantID]);
+             // Redirect to prevent form resubmission on refresh
+              await pool.query('COMMIT');
+            return res.redirect('/food_list');
+        } catch (error) {
+            await pool.query('ROLLBACK');
+            return res.status(500).send("Transaction error: " + error.message);
+        }
     }
 
     res.send(`
@@ -170,13 +207,41 @@ app.get('/food_list', async (req, res) => {
             <title> Food List </title>
         </head>
         <body>
-            <h2> Food List Page     
+            <h2> Restaurants and Menus     
             <a href="/"> <button> Home </button> </a>
             </h2> 
             ${food_listHtml}
+            ${food_listHtml2}
+            <form action="/food_list" method="GET">
+                <br>
+                <h3> Add New Restaurant: </h3>
+                <label for="restaurantName">Enter Restaurant Name:</label>
+                <input type="text" name="restaurantName" id="restaurantName" required>
+                <label for="foodType">Enter Food Type:</label>
+                <input type="text" name="foodType" id="foodType" required>
+                <button type="submit">Add Restaurant</button>
+                <br>
+                <br>
+            </form>
+                <form action="/food_list" method="GET">
+                <h3> Add New Food Item: </h3>
+                <label for="restaurantID">Select Restaurant ID:</label>
+                <select id="restaurantID" name="restaurantID" required>
+                ${restaurantOptions.rows.map(option => `<option value="${option.restaurant_id}">${option.restaurant_id}</option>`).join('')}
+                </select>
+                <label for="foodName">Enter Food Name:</label>
+                <input type="text" name="foodName" id="foodName" required>
+                <label for="foodPrice">Enter Food Price ($):</label>
+                <input type="number" name="foodPrice" id="foodPrice" required>
+                <button type="submit">Add Food Item</button>
+            </form>
         </body>
         </html>
     `);
+    } catch (error) {
+        return res.status(500).send("Error: " + error.message);
+    }
+
 });
 
 app.get('/customer', async (req, res) => {
