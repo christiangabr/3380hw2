@@ -31,7 +31,7 @@ app.get('/', async (req, res) => {
                 const bank = customer_account.rows[0];
                 const transactionDate = new Date().toJSON().slice(0, 10); // Get the current date (YYYY-MM-DD)
 
-                if (bank.account_balance > food.price) {
+                if (bank.account_balance > (food.price + (food.price * tax))) {
                     // Add transaction
                     const queryResult = await pool.query('INSERT INTO transactions (customer_id, food_id, transaction_date) VALUES ($1, $2, $3) RETURNING t_id', [customerId, food.food_id, transactionDate]);
                     
