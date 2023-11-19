@@ -21,12 +21,13 @@ app.get('/', async (req, res) => {
     try {
         const foodId = req.query.foodId;
         const customerId = req.query.customerId;
+        const qty = req.query.qty;
         const tip = req.query.tip;
 
         const customerOptions = await pool.query('SELECT customer_id FROM customer');
         const foodOptions = await pool.query('SELECT food_id FROM food_list');
 
-        if (foodId && customerId) {
+        if (foodId && customerId && qty) {
             try {
                 await pool.query('BEGIN');
                 const foodData = await pool.query('SELECT * FROM food_list WHERE food_id = $1', [foodId]);
@@ -36,37 +37,33 @@ app.get('/', async (req, res) => {
                     const food = foodData.rows[0];
                     const bank = customer_account.rows[0];
                     const transactionDate = new Date().toJSON().slice(0, 10); // Get the current date (YYYY-MM-DD)
-    
-                    if (bank.account_balance >= (food.price + (food.price * tax))) {
+
+                    const { rows } = await pool.query('SELECT member FROM account_info WHERE customer_id = $1', [customerId]);
+                    const membership = rows[0].member;
+                    let totalCost = 0;
+                    if (membership) {
+                        totalCost = ((food.price * qty) - ((food.price * qty) * discount));
+                        totalCost = totalCost + ((totalCost) * tax);
+                        if (tip) {
+                            totalCost += parseFloat(tip);
+                        }
+                    }
+                    else {
+                        totalCost = ((food.price * qty) + ((food.price * qty) * tax));
+                        if (tip) {
+                            totalCost += parseFloat(tip);
+                        }
+                    }
+
+                    if (bank.account_balance >= totalCost) {
                         // Add transaction
-                        const queryResult = await pool.query('INSERT INTO transactions (customer_id, food_id, transaction_date, total_cost) VALUES ($1, $2, $3, $4) RETURNING t_id', [customerId, food.food_id, transactionDate, 0]);
+                        const queryResult = await pool.query('INSERT INTO transactions (customer_id, food_id, quantity, transaction_date, total_cost) VALUES ($1, $2, $3, $4, $5) RETURNING t_id', [customerId, food.food_id, qty, transactionDate, totalCost]);
                         await pool.query('COMMIT');
                         if (queryResult.rows.length > 0) {
                             const t_id = queryResult.rows[0].t_id;
-                            const { rows } = await pool.query('SELECT member FROM account_info WHERE customer_id = $1', [customerId]);
-                            const membership = rows[0].member;
-                            if (membership) {
-                                let totalCost = food.price - (food.price * discount);
-                                if (tip) {
-                                    totalCost = totalCost + (food.price * tax);
-                                    totalCost += parseFloat(tip);
-                                }
-                                else {
-                                    totalCost = totalCost + (food.price * tax);
-                                }
-                                await pool.query('UPDATE account_info SET account_balance = account_balance - $1 WHERE customer_id = $2', [totalCost, customerId]);
-                                await pool.query('UPDATE transactions SET total_cost = $1 WHERE t_id = $2', [totalCost, t_id]);
-                                await pool.query('COMMIT');
-                            }
-                            else {
-                                let totalCost = food.price + (food.price * tax);
-                                if (tip) {
-                                    totalCost += parseFloat(tip);
-                                }
-                                await pool.query('UPDATE account_info SET account_balance = account_balance - $1 WHERE customer_id = $2', [totalCost, customerId]);
-                                await pool.query('UPDATE transactions SET total_cost = $1 WHERE t_id = $2', [totalCost, t_id]);
-                                await pool.query('COMMIT');
-                            }
+                            await pool.query('UPDATE account_info SET account_balance = account_balance - $1 WHERE customer_id = $2', [totalCost, customerId]);
+                            await pool.query('COMMIT');
+                            
                         } else {
                             await pool.query('ROLLBACK');
                             return res.status(500).send("Failed to retrieve transaction ID.");
@@ -110,6 +107,19 @@ app.get('/', async (req, res) => {
                 <label for="foodId">Select Food ID:</label>
                 <select id="foodId" name="foodId" required>
                 ${foodOptions.rows.map(option => `<option value="${option.food_id}">${option.food_id}</option>`).join('')}
+                </select>
+                <label for="qty">Select Quantity:</label>
+                <select name="qty" id="qty">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
                 </select>
                 <label for="tip">Enter Tip Amount ($):</label>
                 <input type="number" name="tip" id="tip">
@@ -451,7 +461,7 @@ app.get('/transactionspage', async (req, res) => {
         if (result.rows.length > 0) {
             customerName = result.rows[0].customer_name; 
             transactionsHtml = result.rows.map(row => {
-                return `<p>Transaction ID: ${row.t_id}, Customer ID: ${row.customer_id}, Food ID: ${row.food_id}, Transaction Date: ${row.transaction_date}</p>`;
+                return `<p>Transaction ID: ${row.t_id}, Customer ID: ${row.customer_id}, Food ID: ${row.food_id}, Quantity: ${row.quantity} Transaction Date: ${row.transaction_date}</p>`;
             }).join('');
         }
 
@@ -506,7 +516,7 @@ app.get('/transactions', async (req, res) => {
                 lastName = result.rows[0].last_name;
                 transactionsHtml = result.rows.map(row => {
                     totalSpent += row.total_cost;
-                    return `<p>ID: ${row.t_id}, Restaurant: ${row.restaurant_name}, Food: ${row.food_name}, Price: ${'$' + row.food_price}, Date: ${row.transaction_date}, Total Cost (Including Discounts, Taxes and Tips): ${row.total_cost}</p>`;
+                    return `<p>Transaction ID: ${row.t_id}, Restaurant: ${row.restaurant_name}, Food: ${row.food_name}, Price: $${row.food_price}, Quantity: ${row.quantity}, Date: ${row.transaction_date}, Total Cost (Including Discounts, Taxes and Tips): $${row.total_cost}</p>`;
                 }).join('');
             }
         } catch (err) {
