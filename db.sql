@@ -41,6 +41,7 @@ CREATE TABLE transactions (
     t_id SERIAL PRIMARY KEY,
     customer_id INT,
     food_id INT,
+    quantity INT,
     transaction_date VARCHAR,
     total_cost FLOAT
 );
@@ -53,7 +54,7 @@ INSERT INTO customer (customer_id, first_name, last_name, age) VALUES
 (5, 'Charlie', 'Brown', 36);
 
 INSERT INTO account_info (customer_id, card_number, account_balance, member) VALUES
-(1, '8734432167821239', 100, FALSE),
+(1, '8734432167821239', 0, FALSE),
 (2, '4356432155823123', 0, FALSE),
 (3, '4231237923832181', 0, FALSE),
 (4, '5634728398732734', 0, FALSE),
