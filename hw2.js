@@ -207,7 +207,7 @@ app.get('/food_list', async (req, res) => {
 
                     // Create different HTML based on the condition
                     const html = isDifferentRestaurantId
-                    ? `<h3>${row.restaurant_name} (${row.food_type} Restaurant), Location: ${row.restaurant_location}, Restaurant ID: ${row.restaurant_id}</h3>
+                    ? `<h3>${row.restaurant_name} (${row.food_type} Restaurant), <br> Location: ${row.restaurant_location}, <br> Restaurant ID: ${row.restaurant_id}</h3>
                     <p>FoodID: ${row.food_id}, Food: ${row.food_name}, Price: ${'$' + row.price}</p>`
                     : `FoodID: ${row.food_id}, Food: ${row.food_name}, Price: ${'$' + row.price}</p>`;
                     
@@ -220,7 +220,7 @@ app.get('/food_list', async (req, res) => {
             const result2 = await pool.query('SELECT * FROM restaurant WHERE restaurant_id NOT IN (SELECT f.restaurant_id FROM food_list f JOIN restaurant r on f.restaurant_id = r.restaurant_id)');
             if (result2.rows.length > 0) {
                 food_listHtml2 = result2.rows.map(row => {
-                    return `<h3>${row.restaurant_name} (${row.food_type} Restaurant), Location: ${row.restaurant_location}, Restaurant ID: ${row.restaurant_id}</h3>`;
+                    return `<h3>${row.restaurant_name} (${row.food_type} Restaurant), <br> Location: ${row.restaurant_location}, <br> Restaurant ID: ${row.restaurant_id}</h3>`;
                 }).join('');
             }
             
