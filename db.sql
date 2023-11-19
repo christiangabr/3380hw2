@@ -31,7 +31,8 @@ ALTER SEQUENCE food_list_food_id_seq RESTART WITH 21;
 
 CREATE TABLE restaurant (
     restaurant_id SERIAL PRIMARY KEY,
-    restaurant_name VARCHAR,
+    restaurant_name VARCHAR ,
+    restaurant_location VARCHAR,
     food_type VARCHAR
 );
 ALTER SEQUENCE restaurant_restaurant_id_seq RESTART WITH 5;
@@ -79,9 +80,13 @@ INSERT INTO food_list (food_id, food_name, price, restaurant_id) VALUES
 (19, 'Takoyaki', 8, 4),
 (20, 'Miso Soup', 8, 4);
 
-INSERT INTO restaurant (restaurant_id, restaurant_name, food_type) VALUES
-(1, 'The Flying Dumpling', 'Chinese'),
-(2, 'Sorrento', 'Italian'),
-(3, 'Picuaritos', 'Mexican'),
-(4, 'Fukuoka', 'Japanese');
+INSERT INTO restaurant (restaurant_id, restaurant_name, restaurant_location,food_type) VALUES
+(1, 'The Flying Dumpling','9790 Lancaster St.o
+Natchez, MS 39120', 'Chinese'),
+(2, 'Sorrento', '866 East Dogwood Ave.
+Martinsville, VA 24112','Italian'),
+(3, 'Picuaritos', '239 North Westminster Drive
+Chatsworth, GA 30705','Mexican'),
+(4, 'Fukuoka', '97 Philmont Road
+Lafayette, IN 47905','Japanese');
 

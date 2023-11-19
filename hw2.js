@@ -193,37 +193,40 @@ app.get('/food_list', async (req, res) => {
 
                     // Create different HTML based on the condition
                     const html = isDifferentRestaurantId
-                        ? `<h3> ${row.restaurant_name} (${row.food_type} Restaurant),   Restaurant ID: ${row.restaurant_id}</h3>
-                        <p>FoodID: ${row.food_id}, Food: ${row.food_name}, Price: ${'$' + row.price}</p>`
-                        : `FoodID: ${row.food_id}, Food: ${row.food_name}, Price: ${'$' + row.price}</p>`;
-
+                    ? `<h3>${row.restaurant_name} (${row.food_type} Restaurant), Location: ${row.restaurant_location}, Restaurant ID: ${row.restaurant_id}</h3>
+                    <p>FoodID: ${row.food_id}, Food: ${row.food_name}, Price: ${'$' + row.price}</p>`
+                    : `FoodID: ${row.food_id}, Food: ${row.food_name}, Price: ${'$' + row.price}</p>`;
+                    
                     // Update the previousRestaurantId for the next iteration
                     previousRestaurantId = row.restaurant_id;
 
                     return html;
                 }).join('');
             }
-        const result2 = await pool.query('SELECT * FROM restaurant WHERE restaurant_id NOT IN (SELECT f.restaurant_id FROM food_list f JOIN restaurant r on f.restaurant_id = r.restaurant_id)');
-        if (result2.rows.length > 0) {
-            food_listHtml2 = result2.rows.map(row => {
-                return `<h3> ${row.restaurant_name} (${row.food_type} Restaurant),   Restaurant ID: ${row.restaurant_id}</h3>`;
-            }).join('');
-        }
+            const result2 = await pool.query('SELECT * FROM restaurant WHERE restaurant_id NOT IN (SELECT f.restaurant_id FROM food_list f JOIN restaurant r on f.restaurant_id = r.restaurant_id)');
+            if (result2.rows.length > 0) {
+                food_listHtml2 = result2.rows.map(row => {
+                    return `<h3>${row.restaurant_name} (${row.food_type} Restaurant), Location: ${row.restaurant_location}, Restaurant ID: ${row.restaurant_id}</h3>`;
+                }).join('');
+            }
+            
     // Add New Restaurant
     const restaurantName = req.query.restaurantName;
     const foodType = req.query.foodType;
-    if (restaurantName && foodType) {
+    const restaurantLocation = req.query.restaurantLocation;
+
+    if (restaurantName && restaurantLocation && foodType ) {
         try {
             await pool.query('BEGIN');
-            const customerInsertResult = await pool.query('INSERT INTO restaurant (restaurant_name, food_type) VALUES ($1, $2) RETURNING restaurant_id', [restaurantName, foodType]);
-             // Redirect to prevent form resubmission on refresh
-              await pool.query('COMMIT');
+            const restaurantInsertResult = await pool.query('INSERT INTO restaurant (restaurant_name, restaurant_location, food_type) VALUES ($1, $2, $3) RETURNING restaurant_id', [restaurantName, restaurantLocation, foodType]);
+            await pool.query('COMMIT');
             return res.redirect('/food_list');
         } catch (error) {
             await pool.query('ROLLBACK');
             return res.status(500).send("Transaction error: " + error.message);
         }
     }
+
 
     // Add New Food Item
     const restaurantID = req.query.restaurantID;
@@ -259,6 +262,8 @@ app.get('/food_list', async (req, res) => {
                 <h3> Add New Restaurant: </h3>
                 <label for="restaurantName">Enter Restaurant Name:</label>
                 <input type="text" name="restaurantName" id="restaurantName" required>
+                <label for="restaurantLocation">Enter Restaurant Location:</label>
+                <input type="text" name="restaurantLocation" id="restaurantLocation" required>
                 <label for="foodType">Enter Food Type:</label>
                 <input type="text" name="foodType" id="foodType" required>
                 <button type="submit">Add Restaurant</button>
