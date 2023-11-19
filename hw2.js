@@ -207,22 +207,39 @@ app.get('/food_list', async (req, res) => {
 
                     // Create different HTML based on the condition
                     const html = isDifferentRestaurantId
+<<<<<<< Updated upstream
                         ? `<h3> ${row.restaurant_name} (${row.food_type} Restaurant),   Restaurant ID: ${row.restaurant_id}</h3>
                         <p>FoodID: ${row.food_id}, Food: ${row.food_name}, Price: ${'$' + row.price}</p>`
                         : `FoodID: ${row.food_id}, Food: ${row.food_name}, Price: ${'$' + row.price}</p>`;
 
+=======
+                    ? `<h3>${row.restaurant_name} (${row.food_type} Restaurant), <br> Location: ${row.restaurant_location}, <br> Restaurant ID: ${row.restaurant_id}</h3>
+                    <p>FoodID: ${row.food_id}, Food: ${row.food_name}, Price: ${'$' + row.price}</p>`
+                    : `FoodID: ${row.food_id}, Food: ${row.food_name}, Price: ${'$' + row.price}</p>`;
+                    
+>>>>>>> Stashed changes
                     // Update the previousRestaurantId for the next iteration
                     previousRestaurantId = row.restaurant_id;
 
                     return html;
                 }).join('');
             }
+<<<<<<< Updated upstream
         const result2 = await pool.query('SELECT * FROM restaurant WHERE restaurant_id NOT IN (SELECT f.restaurant_id FROM food_list f JOIN restaurant r on f.restaurant_id = r.restaurant_id)');
         if (result2.rows.length > 0) {
             food_listHtml2 = result2.rows.map(row => {
                 return `<h3> ${row.restaurant_name} (${row.food_type} Restaurant),   Restaurant ID: ${row.restaurant_id}</h3>`;
             }).join('');
         }
+=======
+            const result2 = await pool.query('SELECT * FROM restaurant WHERE restaurant_id NOT IN (SELECT f.restaurant_id FROM food_list f JOIN restaurant r on f.restaurant_id = r.restaurant_id)');
+            if (result2.rows.length > 0) {
+                food_listHtml2 = result2.rows.map(row => {
+                    return `<h3>${row.restaurant_name} (${row.food_type} Restaurant), <br> Location: ${row.restaurant_location}, <br> Restaurant ID: ${row.restaurant_id}</h3>`;
+                }).join('');
+            }
+            
+>>>>>>> Stashed changes
     // Add New Restaurant
     const restaurantName = req.query.restaurantName;
     const foodType = req.query.foodType;
