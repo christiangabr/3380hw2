@@ -21,6 +21,7 @@ app.get('/', async (req, res) => {
     try {
         const foodId = req.query.foodId;
         const customerId = req.query.customerId;
+        const tip = req.query.tip;
 
         const customerOptions = await pool.query('SELECT customer_id FROM customer');
         const foodOptions = await pool.query('SELECT food_id FROM food_list');
@@ -38,7 +39,7 @@ app.get('/', async (req, res) => {
     
                     if (bank.account_balance >= (food.price + (food.price * tax))) {
                         // Add transaction
-                        const queryResult = await pool.query('INSERT INTO transactions (customer_id, food_id, transaction_date) VALUES ($1, $2, $3) RETURNING t_id', [customerId, food.food_id, transactionDate]);
+                        const queryResult = await pool.query('INSERT INTO transactions (customer_id, food_id, transaction_date, total_cost) VALUES ($1, $2, $3, $4) RETURNING t_id', [customerId, food.food_id, transactionDate, 0]);
                         await pool.query('COMMIT');
                         if (queryResult.rows.length > 0) {
                             const t_id = queryResult.rows[0].t_id;
@@ -46,13 +47,24 @@ app.get('/', async (req, res) => {
                             const membership = rows[0].member;
                             if (membership) {
                                 let totalCost = food.price - (food.price * discount);
-                                totalCost = totalCost + (food.price * tax);
+                                if (tip) {
+                                    totalCost = totalCost + (food.price * tax);
+                                    totalCost += parseFloat(tip);
+                                }
+                                else {
+                                    totalCost = totalCost + (food.price * tax);
+                                }
                                 await pool.query('UPDATE account_info SET account_balance = account_balance - $1 WHERE customer_id = $2', [totalCost, customerId]);
+                                await pool.query('UPDATE transactions SET total_cost = $1 WHERE t_id = $2', [totalCost, t_id]);
                                 await pool.query('COMMIT');
                             }
                             else {
                                 let totalCost = food.price + (food.price * tax);
+                                if (tip) {
+                                    totalCost += parseFloat(tip);
+                                }
                                 await pool.query('UPDATE account_info SET account_balance = account_balance - $1 WHERE customer_id = $2', [totalCost, customerId]);
+                                await pool.query('UPDATE transactions SET total_cost = $1 WHERE t_id = $2', [totalCost, t_id]);
                                 await pool.query('COMMIT');
                             }
                         } else {
@@ -99,6 +111,8 @@ app.get('/', async (req, res) => {
                 <select id="foodId" name="foodId" required>
                 ${foodOptions.rows.map(option => `<option value="${option.food_id}">${option.food_id}</option>`).join('')}
                 </select>
+                <label for="tip">Enter Tip Amount ($):</label>
+                <input type="number" name="tip" id="tip">
                 <button type="submit" >Make Transaction</button>
                 <p> Note: Check the Customers page for Customer IDs and the Restaurants and Menus page for Food IDs.</p>
             </form>
@@ -486,7 +500,8 @@ app.get('/transactions', async (req, res) => {
                 firstName = result.rows[0].first_name;
                 lastName = result.rows[0].last_name;
                 transactionsHtml = result.rows.map(row => {
-                    return `<p>ID: ${row.t_id}, Restaurant: ${row.restaurant_name}, Food: ${row.food_name}, Price: ${'$' + row.food_price}, Date: ${row.transaction_date}</p>`;
+                    totalSpent += row.total_cost;
+                    return `<p>ID: ${row.t_id}, Restaurant: ${row.restaurant_name}, Food: ${row.food_name}, Price: ${'$' + row.food_price}, Date: ${row.transaction_date}, Total Cost (Including Discounts, Taxes and Tips): ${row.total_cost}</p>`;
                 }).join('');
             }
         } catch (err) {
@@ -508,6 +523,7 @@ app.get('/transactions', async (req, res) => {
             <div>
                 ${transactionsHtml}
             </div>
+            <p> Total Spent: $${totalSpent}</p>
         </body>
         </html>
     `);

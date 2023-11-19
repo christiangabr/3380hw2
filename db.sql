@@ -40,7 +40,8 @@ CREATE TABLE transactions (
     t_id SERIAL PRIMARY KEY,
     customer_id INT,
     food_id INT,
-    transaction_date VARCHAR
+    transaction_date VARCHAR,
+    total_cost FLOAT
 );
 
 INSERT INTO customer (customer_id, first_name, last_name, age) VALUES
