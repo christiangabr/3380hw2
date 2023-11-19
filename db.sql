@@ -15,7 +15,8 @@ ALTER SEQUENCE customer_customer_id_seq RESTART WITH 6;
 CREATE TABLE account_info (
     customer_id SERIAL PRIMARY KEY,
     card_number VARCHAR,
-    account_balance FLOAT
+    account_balance FLOAT,
+    member BOOLEAN
 );
 
 ALTER SEQUENCE account_info_customer_id_seq RESTART WITH 6;
@@ -49,12 +50,12 @@ INSERT INTO customer (customer_id, first_name, last_name, age) VALUES
 (4, 'Bob', 'Williams', 24),
 (5, 'Charlie', 'Brown', 36);
 
-INSERT INTO account_info (customer_id, card_number, account_balance) VALUES
-(1, '8734432167821239', 100),
-(2, '4356432155823123', 0),
-(3, '4231237923832181', 0),
-(4, '5634728398732734', 0),
-(5, '9873231267528321', 0);
+INSERT INTO account_info (customer_id, card_number, account_balance, member) VALUES
+(1, '8734432167821239', 100, FALSE),
+(2, '4356432155823123', 0, FALSE),
+(3, '4231237923832181', 0, FALSE),
+(4, '5634728398732734', 0, FALSE),
+(5, '9873231267528321', 0, FALSE);
 
 INSERT INTO food_list (food_id, food_name, price, restaurant_id) VALUES
 (1, 'Eggrolls', 10, 1),

@@ -14,52 +14,111 @@ const fs = require('fs'); // Import the 'fs' module
 const creds = require('./creds.json');
 const pool = new Pool(creds);
 const tax = 0.05;
+const discount = 0.1;
 app.use(express.static(__dirname));
 
 app.get('/', async (req, res) => {
-    const foodId = req.query.foodId;
-    const customerId = req.query.customerId;
+    try {
+        const foodId = req.query.foodId;
+        const customerId = req.query.customerId;
 
-    if (foodId && customerId) {
-        try {
-            await pool.query('BEGIN');
-            const foodData = await pool.query('SELECT * FROM food_list WHERE food_id = $1', [foodId]);
-            const customer_account = await pool.query('SELECT * FROM account_info WHERE customer_id = $1', [customerId]);
+        const customerOptions = await pool.query('SELECT customer_id FROM customer');
+        const foodOptions = await pool.query('SELECT food_id FROM food_list');
 
-            if (foodData.rows.length > 0) {
-                const food = foodData.rows[0];
-                const bank = customer_account.rows[0];
-                const transactionDate = new Date().toJSON().slice(0, 10); // Get the current date (YYYY-MM-DD)
-
-                if (bank.account_balance >= (food.price + (food.price * tax))) {
-                    // Add transaction
-                    const queryResult = await pool.query('INSERT INTO transactions (customer_id, food_id, transaction_date) VALUES ($1, $2, $3) RETURNING t_id', [customerId, food.food_id, transactionDate]);
-                    
-                    if (queryResult.rows.length > 0) {
-                        const t_id = queryResult.rows[0].t_id;
-                        let totalCost = food.price + (food.price * tax);
-                        await pool.query('UPDATE account_info SET account_balance = account_balance - $1 WHERE customer_id = $2', [totalCost, customerId]);
+        if (foodId && customerId) {
+            try {
+                await pool.query('BEGIN');
+                const foodData = await pool.query('SELECT * FROM food_list WHERE food_id = $1', [foodId]);
+                const customer_account = await pool.query('SELECT * FROM account_info WHERE customer_id = $1', [customerId]);
+    
+                if (foodData.rows.length > 0) {
+                    const food = foodData.rows[0];
+                    const bank = customer_account.rows[0];
+                    const transactionDate = new Date().toJSON().slice(0, 10); // Get the current date (YYYY-MM-DD)
+    
+                    if (bank.account_balance >= (food.price + (food.price * tax))) {
+                        // Add transaction
+                        const queryResult = await pool.query('INSERT INTO transactions (customer_id, food_id, transaction_date) VALUES ($1, $2, $3) RETURNING t_id', [customerId, food.food_id, transactionDate]);
                         await pool.query('COMMIT');
+                        if (queryResult.rows.length > 0) {
+                            const t_id = queryResult.rows[0].t_id;
+                            const { rows } = await pool.query('SELECT member FROM account_info WHERE customer_id = $1', [customerId]);
+                            const membership = rows[0].member;
+                            if (membership) {
+                                let totalCost = food.price - (food.price * discount);
+                                totalCost = totalCost + (food.price * tax);
+                                await pool.query('UPDATE account_info SET account_balance = account_balance - $1 WHERE customer_id = $2', [totalCost, customerId]);
+                                await pool.query('COMMIT');
+                            }
+                            else {
+                                let totalCost = food.price + (food.price * tax);
+                                await pool.query('UPDATE account_info SET account_balance = account_balance - $1 WHERE customer_id = $2', [totalCost, customerId]);
+                                await pool.query('COMMIT');
+                            }
+                        } else {
+                            await pool.query('ROLLBACK');
+                            return res.status(500).send("Failed to retrieve transaction ID.");
+                        }
+                        // Redirect to prevent form resubmission on refresh
+                        return res.redirect('/');
                     } else {
-                        await pool.query('ROLLBACK');
-                        return res.status(500).send("Failed to retrieve transaction ID.");
+                        return res.status(500).send("Account balance is too low.");
                     }
-                    // Redirect to prevent form resubmission on refresh
-                    return res.redirect('/transactionspage');
                 } else {
-                    return res.status(500).send("Account balance is too low.");
+                    await pool.query('ROLLBACK');
+                    return res.status(404).send("Food item not found.");
                 }
-            } else {
+            } catch (error) {
                 await pool.query('ROLLBACK');
-                return res.status(404).send("Food not found.");
+                return res.status(500).send("Transaction error: Invalid Customer ID.");
             }
-        } catch (error) {
-            await pool.query('ROLLBACK');
-            return res.status(500).send("Transaction error: " + error.message);
         }
+    
+        res.send(`
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Transactions</title>
+            </head>
+            <body>
+            <div>
+            <form action ="init_tables" method=GET">
+                <h3> Initialize Tables: </h3>
+                <button type="submit" onclick="return confirm('Are you sure you want to initialize tables? Doing so may clear currently existing tables.')">Initialize Tables</button>
+                <p> Note: This will initialize the tables in the database.</p>
+            </form>
+            <form action="/" method="GET">
+                <h3> Make a Transaction: </h3>
+                <label for="customerId">Select Customer ID:</label>
+                <select id="customerId" name="customerId" required>
+                ${customerOptions.rows.map(option => `<option value="${option.customer_id}">${option.customer_id}</option>`).join('')}
+                </select>
+                <label for="foodId">Select Food ID:</label>
+                <select id="foodId" name="foodId" required>
+                ${foodOptions.rows.map(option => `<option value="${option.food_id}">${option.food_id}</option>`).join('')}
+                </select>
+                <button type="submit" >Make Transaction</button>
+                <p> Note: Check the Customers page for Customer IDs and the Restaurants and Menus page for Food IDs.</p>
+            </form>
+            <div>
+                <a href="/customer"> <button> Customers </button> </a>
+                <br>
+                <br>
+                <a href="/food_list"> <button> Restaurants and Menus </button> </a>
+                <br>
+                <br>
+                <a href="/transactionspage"> <button> Transactions </button> </a>
+            <h3> Useful Links: </h3>
+            <a href="readme.txt" target="_blank">View Readme File</a>
+            </body>
+            </html>
+        `);
     }
-
-    res.send(`
+    catch
+    {
+        res.send(`
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -72,30 +131,13 @@ app.get('/', async (req, res) => {
         <form action ="init_tables" method=GET">
             <h3> Initialize Tables: </h3>
             <button type="submit" onclick="return confirm('Are you sure you want to initialize tables? Doing so may clear currently existing tables.')">Initialize Tables</button>
-            <p> Note: This will initialize the tables in the database.</p>
+            <p> Note: First-time users must initialize tables.</p>
         </form>
-        <form action="/" method="GET">
-            <h3> Make a Transaction: </h3>
-            <label for="customerId">Enter Customer ID:</label>
-            <input type="number" name="customerId" id="customerId" required>
-            <label for="foodId">Enter Food ID:</label>
-            <input type="number" name="foodId" id="foodId" required>
-            <button type="submit" >Buy Food</button>
-            <p> Note: Check the Customers page for Customer IDs and the Restaurants and Menus page for Food IDs.</p>
-        </form>
-        <div>
-            <a href="/customer"> <button> Customers </button> </a>
-            <br>
-            <br>
-            <a href="/food_list"> <button> Restaurants and Menus </button> </a>
-            <br>
-            <br>
-            <a href="/transactionspage"> <button> Transactions </button> </a>
-        <h3> Useful Links: </h3>
-        <a href="readme.txt" target="_blank">View Readme File</a>
         </body>
         </html>
     `);
+    }
+
 });
 
 app.get('/init_tables', async (req, res) => {
@@ -119,7 +161,7 @@ app.get('/init_tables', async (req, res) => {
         client.release();
 
         // Optionally, you can provide a success message or redirect to another page.
-        return res.status(200).send("Tables initialized successfully.");
+        return res.redirect('/');
     } catch (error) {
         // Roll back the transaction in case of an error
         await client.query('ROLLBACK');
@@ -249,13 +291,14 @@ app.get('/customer', async (req, res) => {
     // To Display Customer Data
     try {
         const result = await pool.query(`SELECT c.customer_id as customer_id, c.first_name as first_name,
-        c.last_name as last_name, c.age as age, a.card_number as card_number, a.account_balance as account_balance
+        c.last_name as last_name, c.age as age, a.card_number as card_number, a.account_balance as account_balance,
+        a.member as member
         FROM customer c JOIN account_info a ON c.customer_id = a.customer_id ORDER BY c.customer_id`);
         if (result.rows.length > 0) {
             customerName = result.rows[0].customer_name; 
             customersHtml = result.rows.map(row => {
                 return `<p>Customer ID: ${row.customer_id}, First Name: ${row.first_name}, Last Name: ${row.last_name}, Age: ${row.age},
-                Card Number: ${row.card_number}, Account Balance: ${'$' + row.account_balance}
+                Card Number: ${row.card_number}, Account Balance: ${'$' + row.account_balance}, Member: ${row.member}
                 </p>`;
             }).join('');
         }
@@ -277,7 +320,7 @@ app.get('/customer', async (req, res) => {
             const customer = customerInsertResult.rows[0];
             const customerId = customer.customer_id;
             // Insert into the 'account_info' table with the retrieved customer_id
-            await pool.query('INSERT INTO account_info (customer_id, card_number, account_balance) VALUES ($1, $2, $3)', [customerId, cardNum, 0]);
+            await pool.query('INSERT INTO account_info (customer_id, card_number, account_balance, member) VALUES ($1, $2, $3, $4)', [customerId, cardNum, 0, false]);
             await pool.query('COMMIT');
              // Redirect to prevent form resubmission on refresh
             return res.redirect('/customer');
@@ -299,6 +342,26 @@ app.get('/customer', async (req, res) => {
 
             if (customerData.rows.length > 0) {
                 await pool.query('UPDATE account_info SET account_balance = account_balance + $1 WHERE customer_id = $2', [amount, customerId]);
+                await pool.query('COMMIT');
+                // Redirect to prevent form resubmission on refresh
+                return res.redirect('/customer');
+            } else {
+                await pool.query('ROLLBACK');
+                return res.status(404).send("Customer ID not Found.");
+            }
+        } catch (error) {
+            await pool.query('ROLLBACK');
+            return res.status(500).send("Transaction error: " + error.message);
+        }
+    }
+
+    if (customerId) {
+        try {
+            await pool.query('BEGIN');
+            const customerData = await pool.query('SELECT * FROM customer WHERE customer_id = $1', [customerId]);
+
+            if (customerData.rows.length > 0) {
+                await pool.query('UPDATE account_info SET member = NOT MEMBER WHERE customer_id = $1', [customerId]);
                 await pool.query('COMMIT');
                 // Redirect to prevent form resubmission on refresh
                 return res.redirect('/customer');
@@ -348,6 +411,13 @@ app.get('/customer', async (req, res) => {
             <label for="amount">Enter Amount ($):</label>
             <input type="text" name="amount" id="amount" required>
             <button type="submit">Add Funds</button>
+        </form>
+        <br>
+        <form action="/customer" method="GET">
+            <h3> Update Membership: </h3>
+            <label for="customerId">Enter Customer ID:</label>
+            <input type="number" name="customerId" id="customerId" required>
+            <button type="submit">Update Membership</button>
         </form>
         </body>
         </html>
@@ -416,7 +486,6 @@ app.get('/transactions', async (req, res) => {
                 firstName = result.rows[0].first_name;
                 lastName = result.rows[0].last_name;
                 transactionsHtml = result.rows.map(row => {
-                    totalSpent += row.food_price + row.food_price * tax;
                     return `<p>ID: ${row.t_id}, Restaurant: ${row.restaurant_name}, Food: ${row.food_name}, Price: ${'$' + row.food_price}, Date: ${row.transaction_date}</p>`;
                 }).join('');
             }
@@ -438,7 +507,6 @@ app.get('/transactions', async (req, res) => {
             ${firstName ? `<h2> ${firstName + " " + lastName + '&#39s Transactions:'} </h2>` : '<h2> No Transactions. </h2>'}
             <div>
                 ${transactionsHtml}
-                ${transactionsHtml ? `<p>Total Spent (Including Tax): ${'$' + totalSpent}</p>` : ''}
             </div>
         </body>
         </html>
