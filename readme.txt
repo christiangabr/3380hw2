@@ -17,7 +17,7 @@ Our web application consists of the following pages:
 Home Page
 The Home page has many functions. If the user is a first-time user, there will simply be a button to initialize all tables. It is 
 necessary for first-time users to click this button in order to test the website. Doing so will create the tables in the database 
-and initialize them with starter data. Clicking the button will also grant the user access to other features of the web application.
+and populate them with starter data. Clicking the button will also grant the user access to other features of the web application.
 Additionally, upon clicking the button, it will be replaced into a 'Clear Tables' button that will give the user the option to 
 completely clear all tables in the database. Because this is considered to be a 'dangerous' operation, a pop-up should appear upon 
 clicking it to warn users. Below the 'Clear Tables' button, there will be a 'Make a Transaction' section. Check the "How 
