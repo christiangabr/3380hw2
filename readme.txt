@@ -1,9 +1,6 @@
-NOTE: This file is currently outdated!!!
-
-
 Project: Enterprise Database Application (hw2)
 Team: Team 10
-Date: 11/9/2023
+Date: 11/22/2023
 
 Objective: Develop a web application for a chain of restaurants that features transaction and query processing.
 
@@ -19,24 +16,41 @@ Our web application consists of the following pages:
 
 Home Page
 The Home page has many functions. At the top of the page, there is a button to initialize all tables. It is necessary
-to click this button in order to test the website. However, clicking this button may also clear current tables.
-Thus, we decided to add a pop-up upon clicking it to warn users. Below this, there are two input boxes to make a transaction 
-for a specific customer. It is necessary to input a valid customer ID and food ID for these input boxes. To find valid IDs,
-navigate the Food List and Customers page. Lastly, the bottom of the page contains buttons to navigate all of the other pages.
-
-Food List Page
-The Food List page contains all of the food items from all restaurants along with their food ID and price.
+for first-time users to click this button in order to test the website. However, clicking this button may also clear tables 
+that currently exist. Thus, we decided to add a pop-up upon clicking it to warn users. Below this, there is a 'Make a Transaction' 
+section. Check the "How Transactions Work" segment below for more information about how transactions work. Below the 'Make a 
+Transaction' section, there are buttons to navigate all of the other pages. Lastly, the bottom of the Home page contains links 
+that lead to this readme file and the demo video for the web application.
 
 Customers Page
-The Customers page contains all customer names along with their customer IDs and age. The bottom of the Customers
-page contains an input box that allows users to get all of a specific customer's transactions along with
-the total amount of money they spent from all their transactions.
+The Customers page contains all of the customers' information including their account information (Note that the data being
+displayed is a combination of the two tables 'customer' and 'account_info' in the database). Below the customers' information,
+there are three features. The first feature is the 'Add New Customer' feature. By entering all of the necessary information,
+the user will be able to create a new customer through this feature. Doing this creates a new row for the 'customer' table and 
+the 'account_info' table. The next feature is the 'Add Funds to Account Balance' feature. As the name suggests, the user can
+add funds to a customer's account balance by simply entering a customer ID and the amount of funds that the user wants to add.
+Lastly, there is the 'Update Membership' feature which allows the user to change a customer's membership status by simply
+entering that customer's customer ID.
 
-Bank Account Page
-The Bank Account page contains all of the customers' bank account information. This includes customer ID,
-card number and account balance. This page can be useful for checking whether a transaction correctly 
-updates a customer's account balance.
+Restaurants and Menus Page
+The Restaurants and Menus page contains all of the restaurants along with each of the restaurants' food items and other
+information about those food items. At the bottom of this page, there are are two features. The first feature is the 'Add New
+Restaurant' feature which allows the user to create a new restaurant by entering the restaurant name, location and type of food
+served in that restaurant. The second feature is the 'Add New Food Item' feature which allows the user to add a new food item to
+a specific restaurant by selecting a restaurant ID and then entering the name of the food item and its price.
 
 Transactions Page
 The Transactions page contains transaction information from all customers. This includes transaction ID, customer ID,
-food ID and transaction date.
+food ID, quantity and transaction date. At the bottom of this page, the user may enter a specific customer ID in order
+to view all of that customer's transactions along with the total amount of money they spent from all of their transactions.
+
+How Transactions Work:
+The main way to make a transaction in this web application is through the 'Make a Transaction' section of the Home page.
+To make a transaction, the user must first select a customer ID and a food ID (Recall that customer IDs can be found in the 
+Customers page and food IDs can be found in the Restaurants and Menus page). Then, the user must select the quantity of the
+chosen food item that they want to buy for their chosen customer (max quantity is 10). Lastly, the user may choose to add a tip,
+but doing so is completely optional. It is important to note that all food items have a 5% tax. Additionally, if a chosen
+customer is a member, then that customer will receive a 10% discount. The discount is applied first, followed by the tax and
+the tip is added last. For example, if a customer is a member and that customer buys 10 of a food item that costs $10 and chooses
+to tip $10, the base cost will be $100, then it will be $90 after the 10% discount, $94.5 after the tax is applied and the final 
+cost will be $104.5 after the tip is added.

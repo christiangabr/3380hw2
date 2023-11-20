@@ -60,10 +60,8 @@ app.get('/', async (req, res) => {
                         const queryResult = await pool.query('INSERT INTO transactions (customer_id, food_id, quantity, transaction_date, total_cost) VALUES ($1, $2, $3, $4, $5) RETURNING t_id', [customerId, food.food_id, qty, transactionDate, totalCost]);
                         await pool.query('COMMIT');
                         if (queryResult.rows.length > 0) {
-                            const t_id = queryResult.rows[0].t_id;
                             await pool.query('UPDATE account_info SET account_balance = account_balance - $1 WHERE customer_id = $2', [totalCost, customerId]);
                             await pool.query('COMMIT');
-                            
                         } else {
                             await pool.query('ROLLBACK');
                             return res.status(500).send("Failed to retrieve transaction ID.");
@@ -89,10 +87,11 @@ app.get('/', async (req, res) => {
             <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Transactions</title>
+                <title>Chain of Restaurants</title>
             </head>
             <body>
             <div>
+            <h2> Home Page </h2>
             <form action ="init_tables" method=GET">
                 <h3> Initialize Tables: </h3>
                 <button type="submit" onclick="return confirm('Are you sure you want to initialize tables? Doing so may clear currently existing tables.')">Initialize Tables</button>
@@ -148,10 +147,11 @@ app.get('/', async (req, res) => {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Transactions</title>
+            <title>Chain of Restaurants</title>
         </head>
         <body>
         <div>
+        <h2> Home Page </h2>
         <form action ="init_tables" method=GET">
             <h3> Initialize Tables: </h3>
             <button type="submit" onclick="return confirm('Are you sure you want to initialize tables? Doing so may clear currently existing tables.')">Initialize Tables</button>
@@ -200,7 +200,7 @@ app.get('/init_tables', async (req, res) => {
 app.get('/food_list', async (req, res) => {
 
 
-    // Display Restaurants + Menus
+    // To Display Restaurants + Menus
     let food_listHtml = '';
     let food_listHtml2 = '';
     try {
@@ -234,7 +234,7 @@ app.get('/food_list', async (req, res) => {
                 }).join('');
             }
             
-    // Add New Restaurant
+    // To Add New Restaurant
     const restaurantName = req.query.restaurantName;
     const foodType = req.query.foodType;
     const restaurantLocation = req.query.restaurantLocation;
@@ -242,7 +242,7 @@ app.get('/food_list', async (req, res) => {
     if (restaurantName && restaurantLocation && foodType ) {
         try {
             await pool.query('BEGIN');
-            const restaurantInsertResult = await pool.query('INSERT INTO restaurant (restaurant_name, restaurant_location, food_type) VALUES ($1, $2, $3) RETURNING restaurant_id', [restaurantName, restaurantLocation, foodType]);
+            await pool.query('INSERT INTO restaurant (restaurant_name, restaurant_location, food_type) VALUES ($1, $2, $3) RETURNING restaurant_id', [restaurantName, restaurantLocation, foodType]);
             await pool.query('COMMIT');
             return res.redirect('/food_list');
         } catch (error) {
@@ -252,14 +252,14 @@ app.get('/food_list', async (req, res) => {
     }
 
 
-    // Add New Food Item
+    // To Add New Food Item
     const restaurantID = req.query.restaurantID;
     const foodName = req.query.foodName;
     const foodPrice = req.query.foodPrice;
     if (restaurantID && foodName && foodPrice) {
         try {
             await pool.query('BEGIN');
-            const customerInsertResult = await pool.query('INSERT INTO food_list (food_name, price, restaurant_id) VALUES ($1, $2, $3) RETURNING food_id', [foodName, foodPrice, restaurantID]);
+            await pool.query('INSERT INTO food_list (food_name, price, restaurant_id) VALUES ($1, $2, $3) RETURNING food_id', [foodName, foodPrice, restaurantID]);
              // Redirect to prevent form resubmission on refresh
               await pool.query('COMMIT');
             return res.redirect('/food_list');
@@ -384,6 +384,7 @@ app.get('/customer', async (req, res) => {
         }
     }
 
+    // To Update Customer's Membership
     if (customerId) {
         try {
             await pool.query('BEGIN');
@@ -455,6 +456,8 @@ app.get('/customer', async (req, res) => {
 
 
 app.get('/transactionspage', async (req, res) => {
+
+    // Display all transactions
     let transactionsHtml = 'No transaction yet.';
     try {
         const result = await pool.query(`SELECT * FROM transactions ORDER BY t_id`);
@@ -494,6 +497,8 @@ app.get('/transactionspage', async (req, res) => {
 });
 
 app.get('/transactions', async (req, res) => {
+
+    // Display specific customer's transactions
     const customerId = req.query.customerId;
     let transactionsHtml = "";
     let totalSpent = 0;
