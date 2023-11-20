@@ -15,12 +15,15 @@ our class discord as a template. Thus, getting the web application to run will b
 Our web application consists of the following pages:
 
 Home Page
-The Home page has many functions. At the top of the page, there is a button to initialize all tables. It is necessary
-for first-time users to click this button in order to test the website. However, clicking this button may also clear tables 
-that currently exist. Thus, we decided to add a pop-up upon clicking it to warn users. Below this, there is a 'Make a Transaction' 
-section. Check the "How Transactions Work" segment below for more information about how transactions work. Below the 'Make a 
-Transaction' section, there are buttons to navigate all of the other pages. Lastly, the bottom of the Home page contains links 
-that lead to this readme file and the demo video for the web application.
+The Home page has many functions. If the user is a first-time user, there will simply be a button to initialize all tables. It is 
+necessary for first-time users to click this button in order to test the website. Doing so will create the tables in the database 
+and initialize them with starter data. Clicking the button will also grant the user access to other features of the web application.
+Additionally, upon clicking the button, it will be replaced into a 'Clear Tables' button that will give the user the option to 
+completely clear all tables in the database. Because this is considered to be a 'dangerous' operation, a pop-up should appear upon 
+clicking it to warn users. Below the 'Clear Tables' button, there will be a 'Make a Transaction' section. Check the "How 
+Transactions Work" segment below for more information about how transactions work. Under the 'Make a Transaction' section, there 
+will be buttons to navigate all of the other pages. Lastly, the bottom of the Home page will contain links that lead to this 
+readme file and the demo video for the web application.
 
 Customers Page
 The Customers page contains all of the customers' information including their account information (Note that the data being
@@ -52,5 +55,5 @@ chosen food item that they want to buy for their chosen customer (max quantity i
 but doing so is completely optional. It is important to note that all food items have a 5% tax. Additionally, if a chosen
 customer is a member, then that customer will receive a 10% discount. The discount is applied first, followed by the tax and
 the tip is added last. For example, if a customer is a member and that customer buys 10 of a food item that costs $10 and chooses
-to tip $10, the base cost will be $100, then it will be $90 after the 10% discount, $94.5 after the tax is applied and the final 
-cost will be $104.5 after the tip is added.
+to tip $10, the base cost will be $100, then it will be $90 after the 10% discount, $94.5 after the 5% tax is applied and the final 
+cost will be $104.5 after the $10 tip is added.

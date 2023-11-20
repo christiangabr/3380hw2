@@ -92,10 +92,10 @@ app.get('/', async (req, res) => {
             <body>
             <div>
             <h2> Home Page </h2>
-            <form action ="init_tables" method=GET">
-                <h3> Initialize Tables: </h3>
-                <button type="submit" onclick="return confirm('Are you sure you want to initialize tables? Doing so may clear currently existing tables.')">Initialize Tables</button>
-                <p> Note: This will initialize the tables in the database.</p>
+            <form action ="clear_tables" method=GET">
+                <h3> Clear Tables: </h3>
+                <button type="submit" onclick="return confirm('Are you sure you want to clear tables?')">Clear Tables</button>
+                <p> Note: This will clear all the tables in the database.</p>
             </form>
             <form action="/" method="GET">
                 <h3> Make a Transaction: </h3>
@@ -197,8 +197,40 @@ app.get('/init_tables', async (req, res) => {
     }
 });
 
-app.get('/food_list', async (req, res) => {
+app.get('/clear_tables', async (req, res) => {
+    const client = await pool.connect();
 
+    try {
+        // Begin a transaction
+        await client.query('BEGIN');
+
+        // Read the SQL script from the db.sql file
+        const sqlFilePath = path.join(__dirname, 'db2.sql');
+        const sqlScript = fs.readFileSync(sqlFilePath, 'utf8');
+
+        // Execute the SQL script to initialize tables
+        await client.query(sqlScript);
+
+        // Commit the transaction if everything is successful
+        await client.query('COMMIT');
+
+        // Release the client connection
+        client.release();
+
+        // Optionally, you can provide a success message or redirect to another page.
+        return res.redirect('/');
+    } catch (error) {
+        // Roll back the transaction in case of an error
+        await client.query('ROLLBACK');
+
+        // Release the client connection
+        client.release();
+
+        return res.status(500).send("Table initialization failed: " + error.message);
+    }
+});
+
+app.get('/food_list', async (req, res) => {
 
     // To Display Restaurants + Menus
     let food_listHtml = '';
@@ -318,6 +350,7 @@ app.get('/food_list', async (req, res) => {
 app.get('/customer', async (req, res) => {
 
     // To Display Customer Data
+    let customersHtml = '';
     try {
         const result = await pool.query(`SELECT c.customer_id as customer_id, c.first_name as first_name,
         c.last_name as last_name, c.age as age, a.card_number as card_number, a.account_balance as account_balance,
@@ -332,11 +365,7 @@ app.get('/customer', async (req, res) => {
             }).join('');
         }
 
-    } catch (error) {
-        return res.status(500).send("Error: " + error.message);
-    }
-
-    // To Add New Customer
+         // To Add New Customer
     const firstName = req.query.firstName;
     const lastName = req.query.lastName;
     const age = req.query.age;
@@ -452,6 +481,9 @@ app.get('/customer', async (req, res) => {
         </body>
         </html>
     `);
+    } catch (error) {
+        return res.status(500).send("Error: " + error.message);
+    }
 });
 
 
