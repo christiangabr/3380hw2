@@ -57,10 +57,14 @@ app.get('/', async (req, res) => {
 
                     if (bank.account_balance >= totalCost) {
                         // Add transaction
-                        const queryResult = await pool.query('INSERT INTO transactions (customer_id, food_id, quantity, transaction_date, total_cost) VALUES ($1, $2, $3, $4, $5) RETURNING t_id', [customerId, food.food_id, qty, transactionDate, totalCost]);
+                        let transaction1 = 'INSERT INTO transactions (customer_id, food_id, quantity, transaction_date, total_cost) VALUES ($1, $2, $3, $4, $5) RETURNING t_id;'
+                        const queryResult = await pool.query(transaction1, [customerId, food.food_id, qty, transactionDate, totalCost]);
+                        fs.appendFileSync('transaction.sql', `${transaction1}\n`, { flag: 'a' });
                         await pool.query('COMMIT');
                         if (queryResult.rows.length > 0) {
-                            await pool.query('UPDATE account_info SET account_balance = account_balance - $1 WHERE customer_id = $2', [totalCost, customerId]);
+                            let transaction2 = 'UPDATE account_info SET account_balance = account_balance - $1 WHERE customer_id = $2;'
+                            await pool.query(transaction2, [totalCost, customerId]);
+                            fs.appendFileSync('transaction.sql', `${transaction2}\n`, { flag: 'a' });
                             await pool.query('COMMIT');
                         } else {
                             await pool.query('ROLLBACK');
@@ -236,9 +240,11 @@ app.get('/food_list', async (req, res) => {
     let food_listHtml = '';
     let food_listHtml2 = '';
     try {
-        const result = await pool.query(`SELECT * FROM food_list 
+        let query1 = `SELECT * FROM food_list 
         JOIN restaurant ON food_list.restaurant_id = restaurant.restaurant_id 
-        ORDER BY food_list.restaurant_id`);
+        ORDER BY food_list.restaurant_id;`
+        const result = await pool.query(query1);
+        fs.appendFileSync('query.sql', `${query1}\n`, { flag: 'a' });
         const restaurantOptions = await pool.query('SELECT restaurant_id FROM restaurant');
         if (result.rows.length > 0) {
                 let previousRestaurantId = null;
@@ -259,7 +265,9 @@ app.get('/food_list', async (req, res) => {
                     return html;
                 }).join('');
             }
-            const result2 = await pool.query('SELECT * FROM restaurant WHERE restaurant_id NOT IN (SELECT f.restaurant_id FROM food_list f JOIN restaurant r on f.restaurant_id = r.restaurant_id)');
+            let query2 = 'SELECT * FROM restaurant WHERE restaurant_id NOT IN (SELECT f.restaurant_id FROM food_list f JOIN restaurant r on f.restaurant_id = r.restaurant_id);'
+            const result2 = await pool.query(query2);
+            fs.appendFileSync('query.sql', `${query2}\n`, { flag: 'a' });
             if (result2.rows.length > 0) {
                 food_listHtml2 = result2.rows.map(row => {
                     return `<h3>${row.restaurant_name} (${row.food_type} Restaurant), <br> Location: ${row.restaurant_location}, <br> Restaurant ID: ${row.restaurant_id}</h3>`;
@@ -274,7 +282,9 @@ app.get('/food_list', async (req, res) => {
     if (restaurantName && restaurantLocation && foodType ) {
         try {
             await pool.query('BEGIN');
-            await pool.query('INSERT INTO restaurant (restaurant_name, restaurant_location, food_type) VALUES ($1, $2, $3) RETURNING restaurant_id', [restaurantName, restaurantLocation, foodType]);
+            let query3 = 'INSERT INTO restaurant (restaurant_name, restaurant_location, food_type) VALUES ($1, $2, $3) RETURNING restaurant_id;'
+            await pool.query(query3, [restaurantName, restaurantLocation, foodType]);
+            fs.appendFileSync('query.sql', `${query3}\n`, { flag: 'a' });
             await pool.query('COMMIT');
             return res.redirect('/food_list');
         } catch (error) {
@@ -291,7 +301,9 @@ app.get('/food_list', async (req, res) => {
     if (restaurantID && foodName && foodPrice) {
         try {
             await pool.query('BEGIN');
-            await pool.query('INSERT INTO food_list (food_name, price, restaurant_id) VALUES ($1, $2, $3) RETURNING food_id', [foodName, foodPrice, restaurantID]);
+            let query4 = 'INSERT INTO food_list (food_name, price, restaurant_id) VALUES ($1, $2, $3) RETURNING food_id;'
+            await pool.query(query4, [foodName, foodPrice, restaurantID]);
+            fs.appendFileSync('query.sql', `${query4}\n`, { flag: 'a' });
              // Redirect to prevent form resubmission on refresh
               await pool.query('COMMIT');
             return res.redirect('/food_list');
@@ -352,10 +364,14 @@ app.get('/customer', async (req, res) => {
     // To Display Customer Data
     let customersHtml = '';
     try {
-        const result = await pool.query(`SELECT c.customer_id as customer_id, c.first_name as first_name,
-        c.last_name as last_name, c.age as age, a.card_number as card_number, a.account_balance as account_balance,
-        a.member as member
-        FROM customer c JOIN account_info a ON c.customer_id = a.customer_id ORDER BY c.customer_id`);
+        let query5 = `SELECT c.customer_id as customer_id, c.first_name as first_name, c.last_name as last_name, 
+        c.age as age, a.card_number as card_number, a.account_balance as account_balance, a.member as member
+        FROM customer c 
+        JOIN account_info a 
+        ON c.customer_id = a.customer_id 
+        ORDER BY c.customer_id;`
+        const result = await pool.query(query5);
+        fs.appendFileSync('query.sql', `${query5}\n`, { flag: 'a' });
         if (result.rows.length > 0) {
             customerName = result.rows[0].customer_name; 
             customersHtml = result.rows.map(row => {
@@ -365,7 +381,7 @@ app.get('/customer', async (req, res) => {
             }).join('');
         }
 
-         // To Add New Customer
+    // To Add New Customer
     const firstName = req.query.firstName;
     const lastName = req.query.lastName;
     const age = req.query.age;
@@ -374,11 +390,15 @@ app.get('/customer', async (req, res) => {
     if (firstName && lastName && age && cardNum) {
         try {
             await pool.query('BEGIN');
-            const customerInsertResult = await pool.query('INSERT INTO customer (first_name, last_name, age) VALUES ($1, $2, $3) RETURNING customer_id', [firstName, lastName, age]);
+            let query6 = 'INSERT INTO customer (first_name, last_name, age) VALUES ($1, $2, $3) RETURNING customer_id;'
+            const customerInsertResult = await pool.query(query6, [firstName, lastName, age]);
+            fs.appendFileSync('query.sql', `${query6}\n`, { flag: 'a' });
             const customer = customerInsertResult.rows[0];
             const customerId = customer.customer_id;
             // Insert into the 'account_info' table with the retrieved customer_id
-            await pool.query('INSERT INTO account_info (customer_id, card_number, account_balance, member) VALUES ($1, $2, $3, $4)', [customerId, cardNum, 0, false]);
+            let query7 = 'INSERT INTO account_info (customer_id, card_number, account_balance, member) VALUES ($1, $2, $3, $4);'
+            await pool.query(query7, [customerId, cardNum, 0, false]);
+            fs.appendFileSync('query.sql', `${query7}\n`, { flag: 'a' });
             await pool.query('COMMIT');
              // Redirect to prevent form resubmission on refresh
             return res.redirect('/customer');
@@ -399,7 +419,9 @@ app.get('/customer', async (req, res) => {
             const customerData = await pool.query('SELECT * FROM customer WHERE customer_id = $1', [customerId]);
 
             if (customerData.rows.length > 0) {
-                await pool.query('UPDATE account_info SET account_balance = account_balance + $1 WHERE customer_id = $2', [amount, customerId]);
+                let transaction3 = 'UPDATE account_info SET account_balance = account_balance + $1 WHERE customer_id = $2;'
+                await pool.query(transaction3, [amount, customerId]);
+                fs.appendFileSync('transaction.sql', `${transaction3}\n`, { flag: 'a' });
                 await pool.query('COMMIT');
                 // Redirect to prevent form resubmission on refresh
                 return res.redirect('/customer');
@@ -420,7 +442,9 @@ app.get('/customer', async (req, res) => {
             const customerData = await pool.query('SELECT * FROM customer WHERE customer_id = $1', [customerId]);
 
             if (customerData.rows.length > 0) {
-                await pool.query('UPDATE account_info SET member = NOT MEMBER WHERE customer_id = $1', [customerId]);
+                let transaction4 = 'UPDATE account_info SET member = NOT MEMBER WHERE customer_id = $1;'
+                await pool.query(transaction4, [customerId]);
+                fs.appendFileSync('transaction.sql', `${transaction4}\n`, { flag: 'a' });
                 await pool.query('COMMIT');
                 // Redirect to prevent form resubmission on refresh
                 return res.redirect('/customer');
@@ -539,14 +563,16 @@ app.get('/transactions', async (req, res) => {
 
     if (customerId) {
         try {
-            const result = await pool.query(`
-                SELECT t.*, f.food_name AS food_name, f.price AS food_price, c.first_name AS first_name, c.last_name as last_name, r.restaurant_name
-                FROM transactions t 
-                JOIN food_list f ON t.food_id = f.food_id 
-                JOIN customer c ON t.customer_id = c.customer_id
-                JOIN restaurant r on f.restaurant_id = r.restaurant_id
-                WHERE t.customer_id = $1
-            `, [customerId]);
+            let query8 = `
+            SELECT t.*, f.food_name AS food_name, f.price AS food_price, c.first_name AS first_name, c.last_name as last_name, r.restaurant_name
+            FROM transactions t 
+            JOIN food_list f ON t.food_id = f.food_id 
+            JOIN customer c ON t.customer_id = c.customer_id
+            JOIN restaurant r on f.restaurant_id = r.restaurant_id
+            WHERE t.customer_id = $1;
+        `
+            const result = await pool.query(query8, [customerId]);
+            fs.appendFileSync('query.sql', `${query8}\n`, { flag: 'a' });
     
             if (result.rows.length > 0) {
                 firstName = result.rows[0].first_name;
