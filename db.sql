@@ -18,7 +18,6 @@ CREATE TABLE account_info (
     account_balance FLOAT,
     member BOOLEAN
 );
-
 ALTER SEQUENCE account_info_customer_id_seq RESTART WITH 6;
 
 CREATE TABLE food_list (
