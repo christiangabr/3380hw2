@@ -139,6 +139,9 @@ app.get('/', async (req, res) => {
                 <a href="/transactionspage"> <button> Transactions </button> </a>
             <h3> Useful Links: </h3>
             <a href="readme.txt" target="_blank">View Readme File</a>
+            <br>
+            <br>
+            <a href="https://www.youtube.com/watch?v=dJwlax_9uN4" target="_blank">Watch Demo Video</a>
             </body>
             </html>
         `);
